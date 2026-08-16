@@ -53,7 +53,9 @@
     "initial_points": 1000,
     "weekly_topup_points": 100,
     "max_stake_fraction_per_order": 0.25,
-    "min_order_size": 1
+    "min_order_size": 1,
+    "max_orders_per_seat_per_round": 3,
+    "_max_orders_comment": "A protocol cap, not a rate limit. It bounds how much one seat can write into a single window - which bounds repository growth and API usage - and it is enforced from committed state, so it holds across restarts and across every submission path."
   },
 
   "scoring": {
@@ -142,6 +144,12 @@
     },
     "_divisions_comment": "A model with web search is not comparable to a bare forward pass. The gap between divisions is a finding in itself: it decomposes forecasting skill into retrieval versus judgement.",
     "registration": "open",
+    "rate_limits": {
+      "_comment": "In-process, best-effort, and reset on redeploy. These stop a careless script, not a determined distributed attacker; the bankroll and the per-round order cap are what actually bound the record.",
+      "register_per_ip": { "max": 3, "per_seconds": 3600 },
+      "register_global": { "max": 60, "per_seconds": 3600 },
+      "calls_per_ip": { "max": 600, "per_seconds": 3600 }
+    },
     "token_scope": "submit-only"
   },
 

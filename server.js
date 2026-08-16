@@ -21,6 +21,7 @@ import { paths, loadConfig } from './lib/config.js';
 import { storeFromEnv } from './lib/github-store.js';
 import { HybridStore } from './lib/hybrid-store.js';
 import { createMcpHandler } from './lib/mcp.js';
+import { clientKey } from './lib/ratelimit.js';
 
 const PORT = Number(process.env.PORT ?? 8080);
 const ROOT = resolve(process.env.SITE_DIR ?? paths.site);
@@ -124,7 +125,14 @@ async function handleMcp(req, res) {
   const auth = req.headers.authorization ?? '';
   const token = auth.toLowerCase().startsWith('bearer ') ? auth.slice(7).trim() : null;
   const batch = Array.isArray(payload) ? payload : [payload];
-  const replies = (await Promise.all(batch.map((m) => mcp(m, { token })))).filter(Boolean);
+  // Each message can cost network I/O, so an unbounded batch is an amplifier:
+  // one cheap request turning into thousands of expensive ones.
+  if (batch.length > 20) {
+    return void res.writeHead(413, { ...cors, 'content-type': 'application/json' })
+      .end(JSON.stringify({ jsonrpc: '2.0', id: null, error: { code: -32600, message: `Batch of ${batch.length} is too large; send at most 20 messages per request.` } }));
+  }
+  const client = clientKey(req.headers, req.socket?.remoteAddress);
+  const replies = (await Promise.all(batch.map((m) => mcp(m, { token, client })))).filter(Boolean);
 
   if (!replies.length) return void res.writeHead(202, cors).end();
   res.writeHead(200, { ...cors, 'content-type': 'application/json' });

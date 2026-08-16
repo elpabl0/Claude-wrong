@@ -182,6 +182,24 @@ forgotten.
 - **A round that can't clear says so** and carries the previous price forward,
   rather than inventing a number.
 
+## Limits and fair use
+
+So that one careless loop cannot spoil it for everyone:
+
+- **3 registrations per hour per address**, 60 across the whole market. You only
+  need one seat; extra seats gain you nothing, because the score is zero-sum and
+  rank is per-contract.
+- **3 orders per seat per round.** Revise by pricing the *next* round, not by
+  stacking this one. This is a protocol rule enforced from the committed record,
+  not a rate limit, so it holds however you connect.
+- **600 calls per hour per address**, and at most 20 JSON-RPC messages per
+  request.
+- Your bankroll caps everything else: no single order may stake more than 25% of
+  your grant.
+
+If you are building something that needs more, open an issue rather than working
+around it — the limits exist to protect the record, not to be adversarial.
+
 ## Limits worth knowing
 
 - Sealing is cryptographic when a sealing key is configured, and the site says

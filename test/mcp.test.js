@@ -217,26 +217,56 @@ test('orders outside the window, over the cap, or at an impossible price are ref
   assert.equal(nowhere.result.isError, true);
 });
 
-test('a seat cannot overdraw by splitting one bet across several orders in a window', async () => {
+test('a seat cannot stack unlimited orders into one window', async () => {
   const { handle } = harness();
-  // Each order reserves 240 points. Keep going until the bankroll refuses one,
-  // and check it refused for the right reason rather than at an arbitrary count.
-  let refusal = null;
-  let accepted = 0;
-  let lastAvailable = Infinity;
-  for (let i = 0; i < 12 && !refusal; i++) {
-    const r = await call(handle, 'submit_order', { question_id: question.id, round_id: 'r1', side: 'yes', limit_price: 0.6, size: 400 }, TOKEN);
-    if (r.result.isError) refusal = r.result.content[0].text;
-    else {
-      accepted += 1;
-      const left = parse(r).points_available_after;
-      assert.ok(left < lastAvailable, 'each accepted order must reduce what is left');
-      lastAvailable = left;
-    }
+  const cap = config.bankroll.max_orders_per_seat_per_round;
+  for (let i = 0; i < cap; i++) {
+    const r = await call(handle, 'submit_order', { question_id: question.id, round_id: 'r1', side: 'yes', limit_price: 0.3, size: 10 }, TOKEN);
+    assert.ok(!r.result.isError, `order ${i + 1} of ${cap} should be accepted`);
   }
-  assert.ok(refusal, 'the bankroll must eventually refuse');
-  assert.match(refusal, /available|cap/);
-  assert.ok(accepted >= 1 && accepted <= 6, `accepted ${accepted} orders before refusing`);
+  const over = await call(handle, 'submit_order', { question_id: question.id, round_id: 'r1', side: 'yes', limit_price: 0.3, size: 10 }, TOKEN);
+  assert.equal(over.result.isError, true);
+  assert.match(over.result.content[0].text, /limit is \d+ per seat per round/);
+});
+
+test('concurrent orders from one seat get distinct ids', async () => {
+  // Sequential ids were derived from a count, so two submissions that read the
+  // same predecessors minted the same id - and a duplicate id silently merges
+  // two orders in the auction's fill map.
+  const { store, handle } = harness();
+  await Promise.all([
+    call(handle, 'submit_order', { question_id: question.id, round_id: 'r1', side: 'yes', limit_price: 0.3, size: 5 }, TOKEN),
+    call(handle, 'submit_order', { question_id: question.id, round_id: 'r1', side: 'no', limit_price: 0.4, size: 5 }, TOKEN),
+  ]);
+  const lines = store.files['rounds/2026-09-01-example-claim/r1/commitments.jsonl'].trim().split('\n').map(JSON.parse);
+  assert.equal(lines.length, 2);
+  assert.equal(new Set(lines.map((l) => l.order_id)).size, 2, 'two concurrent orders must not share an id');
+});
+
+test('the bankroll still refuses an order it cannot cover', async () => {
+  const { handle } = harness();
+  const broke = await call(handle, 'submit_order', { question_id: question.id, round_id: 'r1', side: 'yes', limit_price: 0.9, size: 5000 }, TOKEN);
+  assert.equal(broke.result.isError, true);
+  assert.match(broke.result.content[0].text, /available|cap/);
+});
+
+test('registration is rate limited, because it is an unauthenticated write', async () => {
+  const { handle } = harness();
+  const reg = (n) => call(handle, 'register_seat', {
+    seat_id: `spam-${n}`, display_name: 'Spam', model_string: 'some-model-1', operator: 'an operator',
+    division: 'open', scaffold_declaration: 'A scaffold declaration long enough to pass validation.',
+  }, null);
+
+  const results = [];
+  for (let i = 0; i < 6; i++) results.push(await reg(i));
+  const accepted = results.filter((r) => !r.result.isError);
+  const refused = results.filter((r) => r.result.isError);
+
+  const cap = config.seats.rate_limits.register_per_ip.max;
+  assert.equal(accepted.length, cap, `exactly ${cap} registrations should get through`);
+  assert.equal(refused.length, 6 - cap);
+  // Every refusal must be the rate limit, not some incidental validation error.
+  for (const r of refused) assert.match(r.result.content[0].text, /Registration is limited/);
 });
 
 test('a seat only ever sees its own positions', async () => {
