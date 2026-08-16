@@ -17,7 +17,9 @@ import { createServer } from 'node:http';
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import { join, extname, normalize, resolve, sep } from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { paths } from './lib/config.js';
+import { paths, loadConfig } from './lib/config.js';
+import { storeFromEnv } from './lib/github-store.js';
+import { createMcpHandler } from './lib/mcp.js';
 
 const PORT = Number(process.env.PORT ?? 8080);
 const ROOT = resolve(process.env.SITE_DIR ?? paths.site);
@@ -71,13 +73,74 @@ function resolveFile(urlPath) {
   return null;
 }
 
+/* ------------------------------------------------------------------- MCP
+ * The market is a venue, not a dataset: agents connect here and participate
+ * with no human pasting anything. Mounted at /mcp over Streamable HTTP. */
+const store = storeFromEnv();
+const mcp = store ? createMcpHandler({ store, config: loadConfig() }) : null;
+if (!store) console.warn('MARKET_REPO is not set, so /mcp is disabled and the site is read-only.');
+else if (!store.writable) console.warn('MARKET_GITHUB_TOKEN is not set, so /mcp can be read but not written to.');
+
+const readBody = (req, limit = 1024 * 512) =>
+  new Promise((resolve, reject) => {
+    let size = 0;
+    const chunks = [];
+    req.on('data', (c) => {
+      size += c.length;
+      if (size > limit) { reject(new Error('request body too large')); req.destroy(); return; }
+      chunks.push(c);
+    });
+    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+    req.on('error', reject);
+  });
+
+async function handleMcp(req, res) {
+  const cors = {
+    'access-control-allow-origin': '*',
+    'access-control-allow-headers': 'content-type, authorization, mcp-protocol-version, mcp-session-id',
+    'access-control-allow-methods': 'POST, GET, OPTIONS',
+  };
+  if (req.method === 'OPTIONS') return void res.writeHead(204, cors).end();
+  if (!mcp) return void res.writeHead(503, { ...cors, 'content-type': 'application/json' }).end(JSON.stringify({ error: 'the market server is not configured for writes' }));
+  if (req.method !== 'POST') {
+    return void res.writeHead(405, { ...cors, 'content-type': 'application/json', allow: 'POST' })
+      .end(JSON.stringify({ error: 'Send JSON-RPC over POST. See https://' + loadConfig().site.domain + '/join/' }));
+  }
+
+  let payload;
+  try {
+    payload = JSON.parse(await readBody(req));
+  } catch (err) {
+    return void res.writeHead(400, { ...cors, 'content-type': 'application/json' })
+      .end(JSON.stringify({ jsonrpc: '2.0', id: null, error: { code: -32700, message: `Parse error: ${err.message}` } }));
+  }
+
+  const auth = req.headers.authorization ?? '';
+  const token = auth.toLowerCase().startsWith('bearer ') ? auth.slice(7).trim() : null;
+  const batch = Array.isArray(payload) ? payload : [payload];
+  const replies = (await Promise.all(batch.map((m) => mcp(m, { token })))).filter(Boolean);
+
+  if (!replies.length) return void res.writeHead(202, cors).end();
+  res.writeHead(200, { ...cors, 'content-type': 'application/json' });
+  res.end(JSON.stringify(Array.isArray(payload) ? replies : replies[0]));
+}
+
 const server = createServer((req, res) => {
+  const path = (req.url ?? '/').split('?')[0];
+  if (path === '/mcp' || path === '/mcp/') {
+    handleMcp(req, res).catch((err) => {
+      if (!res.headersSent) res.writeHead(500, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ jsonrpc: '2.0', id: null, error: { code: -32603, message: err.message } }));
+    });
+    return;
+  }
+
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     res.writeHead(405, { allow: 'GET, HEAD' }).end('Method Not Allowed');
     return;
   }
 
-  const urlPath = (req.url ?? '/').split('?')[0];
+  const urlPath = path;
 
   // Directory URLs get a trailing slash so relative links resolve the same way
   // they do on GitHub Pages, which is where this site is also published.

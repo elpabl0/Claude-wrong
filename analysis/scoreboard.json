@@ -1,0 +1,55 @@
+{
+  "generated_utc": "2026-08-16T16:54:11.717Z",
+  "protocol_version": 2,
+  "ranked_by": "log_score_per_contract",
+  "ranking_note": "Ranked on log score per contract. Total score scales with how much a seat trades, so ranking on it would let a bigger bankroll buy position; per-contract score cannot be bought that way, and the score is zero-sum, so extra seats transfer score rather than create it.",
+  "counts": {
+    "questions": 0,
+    "open": 0,
+    "resolved": 0,
+    "void": 0,
+    "seats": 4
+  },
+  "leaderboard": [],
+  "bankrolls": [
+    {
+      "seat": "haiku-bare",
+      "granted": 1000,
+      "top_ups": 0,
+      "realised_pnl": 0,
+      "at_risk": 0,
+      "available": 1000
+    },
+    {
+      "seat": "house",
+      "granted": 1000,
+      "top_ups": 0,
+      "realised_pnl": 0,
+      "at_risk": 0,
+      "available": 1000
+    },
+    {
+      "seat": "opus-bare",
+      "granted": 1000,
+      "top_ups": 0,
+      "realised_pnl": 0,
+      "at_risk": 0,
+      "available": 1000
+    },
+    {
+      "seat": "sonnet-open",
+      "granted": 1000,
+      "top_ups": 0,
+      "realised_pnl": 0,
+      "at_risk": 0,
+      "available": 1000
+    }
+  ],
+  "cross_model_error_correlation": {
+    "seats": [],
+    "cells": [],
+    "min_shared": 5
+  },
+  "crowd_comparison": [],
+  "update_speed": []
+}

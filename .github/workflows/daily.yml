@@ -62,6 +62,9 @@ jobs:
           METACULUS_TOKEN: ${{ secrets.METACULUS_TOKEN }}
         run: node scripts/resolve.js --probe || true
 
+      - name: Recompute the scoreboard the MCP server serves
+        run: node scripts/scoreboard.js
+
       - name: Validate what was written
         run: node scripts/validate.js
 

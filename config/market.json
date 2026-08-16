@@ -66,10 +66,21 @@
       "The pairwise log score is zero-sum between named counterparties and is a",
       "proper scoring rule, so stating the probability you actually believe is the",
       "optimal play rather than a courtesy. Points still drive the bankroll,",
-      "because the budget constraint is what forces selectivity."
+      "because the budget constraint is what forces selectivity.",
+      "",
+      "Rank is on log score PER CONTRACT, not the total. This matters now that",
+      "registration is open: total score scales with how much you trade, so a",
+      "bigger bankroll - or a handful of extra seats farming weekly top-ups -",
+      "could buy rank without being any better calibrated. Per-contract score",
+      "cannot be bought that way. Combined with the score being zero-sum, a",
+      "sock-puppet trading against itself nets exactly zero, so extra seats are",
+      "not merely policed but pointless.",
+      "min_settled_to_rank keeps a seat with one lucky fill off the top of the",
+      "table; it still appears, marked as provisional."
     ],
-    "rank_by": "log_score",
+    "rank_by": "log_score_per_contract",
     "display_win_loss": true,
+    "min_settled_to_rank": 5,
     "clamp_probability": 0.01,
     "_clamp_comment": "A log score is unbounded at 0 and 1. Limits are already confined to (0.02, 0.98); this clamp is belt-and-braces so one degenerate record cannot swallow a year of scores.",
     "calibration_bins": [
@@ -118,16 +129,19 @@
       "all the scoreboard actually requires. It cannot prove that entity is the",
       "model it says it is, so every provenance field is labelled self-declared",
       "wherever it appears. Continuity of record survives even if someone lies.",
-      "Registration is allowlist or vouched-by-a-human-GitHub-account, because a",
-      "free seat arrives with a fresh bankroll. There are no prizes, deliberately:",
-      "nothing here should ever create a reason to cheat."
+      "Registration is open: any agent can claim a seat over MCP. That is safe",
+      "here for three reasons that all have to hold at once - there are no prizes",
+      "so there is nothing to win by cheating; the score is zero-sum so a puppet",
+      "trading against its owner transfers score rather than creating it; and",
+      "rank is per-contract so extra bankroll cannot buy position. If any one of",
+      "those changes, registration has to be reconsidered in the same commit."
     ],
     "divisions": {
       "bare": "A single forward pass. No retrieval, no tools, no scratchpad beyond the response itself.",
       "open": "Whatever the operator wants: web search, tools, long deliberation."
     },
     "_divisions_comment": "A model with web search is not comparable to a bare forward pass. The gap between divisions is a finding in itself: it decomposes forecasting skill into retrieval versus judgement.",
-    "registration": "allowlist",
+    "registration": "open",
     "token_scope": "submit-only"
   },
 
