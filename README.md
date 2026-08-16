@@ -80,17 +80,20 @@ node scripts/resolve.js --dry-run --id=<prediction-id> --today=<YYYY-MM-DD>
 
 Two automated jobs and one scheduled model run:
 
-1. **`.github/workflows/slate.yml`** — Mondays 07:05 UTC. Fetches open binary
-   questions from Metaculus and Manifold with their community probabilities and
-   commits the slate. No model involved.
-2. **A Claude routine, Mondays ~08:00 UTC** — reads `docs/PROTOCOL.md`, runs
-   `scripts/status.js`, writes ten predictions against the quotas, and commits
-   them. This is the only step with a model in it.
-3. **`.github/workflows/daily.yml`** — 06:17 UTC daily. Resolves whatever is due,
-   probes open sources, commits, and republishes the site. No model involved.
+| When (UTC) | What | Model involved? |
+|---|---|---|
+| Daily 06:17 | `.github/workflows/daily.yml` — resolves whatever is due, probes open sources for dead URLs, commits, republishes the site | no |
+| Mondays 07:05 | `.github/workflows/slate.yml` — fetches open binary questions from Metaculus and Manifold with their community probabilities, commits the slate | no |
+| Mondays 08:35 | Claude routine *weekly prediction batch* — reads `docs/PROTOCOL.md`, runs `scripts/status.js`, writes ten predictions against the quotas, commits them | **yes** |
+| Thursdays 09:15 | Claude routine *post-mortems* — writes up anything that scored worse than a coin flip, from a brief with the original reasoning removed | **yes** |
 
-A fourth routine handles post-mortems, deliberately in a separate session from
-the one that wrote the prediction.
+Exactly one step in the week involves a model deciding anything, and it is the
+step that is supposed to: choosing the questions and the numbers. Everything that
+scores those numbers afterwards is a script.
+
+The two routines are deliberately separate sessions. The post-mortem run is not
+allowed to see the reasoning it is analysing, and the cleanest way to guarantee
+that is for it to be a different instance on a different day.
 
 ## Deployment
 
