@@ -49,6 +49,39 @@ test('rounds tighten toward resolution on every ladder', () => {
   }
 });
 
+/**
+ * When the four house seats wake, in UTC minutes past midnight. Kept here rather
+ * than in config because they live in scheduled routines outside this repo; if
+ * those move, this list moves with them and the assertion below is what notices.
+ */
+const SEAT_WAKE_TIMES_UTC = [
+  { seat: 'house', minutes: 10 * 60 + 20 },
+  { seat: 'opus-bare', minutes: 11 * 60 + 40 },
+  { seat: 'sonnet-open', minutes: 13 * 60 + 10 },
+  { seat: 'haiku-bare', minutes: 14 * 60 + 30 },
+];
+
+test('every round window is long enough for the seats that must trade in it', () => {
+  // The constraint that actually bounds how fast this venue can run. Seats are
+  // scheduled jobs, not screens, so a market cannot clear faster than its
+  // participants wake up. A window narrowed below the spread of wake times
+  // silently excludes seats, and the symptom - a round that fails to clear -
+  // reads as "nobody turned up" rather than "the schedule is wrong".
+  const opensMinutes = 9 * 60; // every ladder opens its rounds at 09:00 UTC
+  const needed = config.rounds.min_distinct_seats_to_clear;
+
+  for (const [id, ladder] of Object.entries(config.rounds.ladders)) {
+    const closes = opensMinutes + ladder.window_hours * 60;
+    const inside = SEAT_WAKE_TIMES_UTC.filter((s) => s.minutes >= opensMinutes && s.minutes <= closes);
+    assert.ok(
+      inside.length > needed,
+      `the ${id} window (09:00–${String(9 + ladder.window_hours).padStart(2, '0')}:00 UTC) contains ${inside.length} seat(s) ` +
+        `and needs more than ${needed} for any margin at all. Excluded: ` +
+        `${SEAT_WAKE_TIMES_UTC.filter((s) => !inside.includes(s)).map((s) => s.seat).join(', ') || 'none'}`,
+    );
+  }
+});
+
 /* ---------------------------------------------------------------- scoring */
 
 const position = (over = {}) => ({

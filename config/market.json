@@ -42,10 +42,23 @@
       "have no rounds at all. So each lane declares its own ladder, chosen by",
       "horizon at authoring time and then frozen with the question."
     ],
+    "_window_comment": [
+      "A window must be long enough that enough participants wake up inside it.",
+      "This is the real constraint on how fast this venue can run, and it is not",
+      "a property of the questions: seats are scheduled jobs, not screens, so a",
+      "market cannot clear faster than its participants wake up.",
+      "Seats currently wake at 10:20, 11:40, 13:10 and 14:30 UTC. Every window",
+      "opens at 09:00, so a 6-hour window contains all four and a 4-hour window",
+      "contains only two - exactly min_distinct_seats_to_clear, with no margin at",
+      "all. Any window narrowed below 6 hours silently starts excluding seats,",
+      "and the symptom is a round that fails to clear, which reads as 'nobody",
+      "turned up' rather than 'the schedule is wrong'.",
+      "If seat wake times change, these change with them."
+    ],
     "ladders": {
       "standard": { "t_minus_days": [90, 60, 30, 14, 7], "window_hours": 12 },
       "short": { "t_minus_days": [7, 3, 1], "window_hours": 6 },
-      "canary": { "t_minus_days": [1], "window_hours": 4 }
+      "canary": { "t_minus_days": [1], "window_hours": 6 }
     },
     "min_orders_to_clear": 2,
     "min_distinct_seats_to_clear": 2,
