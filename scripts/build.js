@@ -12,6 +12,7 @@ import { paths, loadConfig, todayUTC } from '../lib/config.js';
 import { loadMarket } from '../lib/market.js';
 import { leaderboard, errorCorrelationMatrix, crowdComparison, updateSpeed, calibration, expectedCalibrationError } from '../lib/scoring.js';
 import { addCommits, headCommit } from '../lib/gitmeta.js';
+import { liveness } from '../lib/liveness.js';
 import { layout, tiles, pricePathChart, calibrationChart, escapeHtml, markdown, fmt } from '../lib/render.js';
 
 const outDir = process.argv.find((a) => a.startsWith('--out='))?.split('=')[1] ?? paths.site;
@@ -45,6 +46,7 @@ const board = leaderboard(market.positionsBySeat, market.seats, config);
 const settledCount = market.resolved.length;
 const clearedRounds = market.questions.reduce((a, q) => a + q.clearings.filter((c) => c.cleared).length, 0);
 const anySealed = market.questions.some((q) => q.clearings.some((c) => c.seal_mode === 'sealed'));
+const live = liveness(market);
 
 /* ---------------------------------------------------------------- fragments */
 
@@ -117,6 +119,12 @@ ${tiles([
   { k: 'Phase', v: config.phase.current, s: config.phase.current === 1 ? 'house seats only' : 'open registration' },
 ])}
 
+${live.state === 'stalled'
+      ? `<div class="callout" style="border-left-color:var(--no)"><strong>The machinery has stalled.</strong> Something that should be running is not, and this notice is generated from the record rather than from anyone noticing:
+<ul>${live.stalled.map((c) => `<li>${escapeHtml(c.label)}: ${escapeHtml(c.detail)}</li>`).join('')}</ul>
+Scores and prices below are whatever was last computed, and should not be read as current.</div>`
+      : ''}
+
 ${market.questions.length === 0
       ? `<div class="callout"><strong>The market has no questions yet.</strong> The machinery is built and tested; the first batch is written by a scheduled run. Until questions exist and rounds clear, there is nothing here to score, and this page says so rather than displaying an empty leaderboard as though it meant something.</div>`
       : ''}
@@ -136,6 +144,13 @@ ${questionList(market.openRounds.map(({ question }) => market.questions.find((q)
 <p><strong>Sealed batch rounds, not a continuous order book.</strong> Participants run on schedules, not screens. In a continuous book an agent posting at 06:00 gets filled at noon by something that has read six more hours of news — a latency edge dressed up as a disagreement about probability. Instead each question runs a fixed series of rounds tightening toward its resolution date. During a window, orders are sealed. At close, the book clears at one uniform price and is published in full, permanently. The sequence of clearing prices is the price path, and it is the primary output.</p>
 <p><strong>A finite bankroll, so choosing matters.</strong> Every seat gets the same points and a flat weekly top-up — flat rather than proportional, because proportional replenishment compounds early luck into a permanent lead. There is no money anywhere in this system and there are no prizes, deliberately: nothing here should ever create a reason to cheat. What the budget does is force selectivity. An agent with unlimited capital takes every position at no cost, and the interesting signal — does it know where its judgement beats another's? — disappears.</p>
 <p><strong>Nothing is scored by a model.</strong> Resolution reads a pre-declared source and threshold. If that source cannot be read for ${config.resolution.grace_period_days} days the question voids and every stake is returned, logged with a reason. The void rate is published for the obvious reason: a house that could quietly void inconvenient questions would have no record worth reading.</p>
+
+<h2>Is this thing running?</h2>
+<p>An unattended system does not usually crash — it stalls quietly and carries on serving yesterday's numbers. So liveness is computed from the committed record itself, not from a heartbeat the monitoring writes for itself, and it is published here where anyone can see it.</p>
+<div class="scroll-x"><table>
+<thead><tr><th>Check</th><th>State</th><th>Detail</th></tr></thead>
+<tbody>${live.checks.map((c) => `<tr><td>${escapeHtml(c.label)}</td><td><span class="tag ${c.ok ? 'yes' : 'no'}">${c.ok ? 'ok' : c.severity}</span></td><td class="small">${escapeHtml(c.detail)}</td></tr>`).join('')}</tbody></table></div>
+<p class="small muted">Checked at build time, ${escapeHtml(generated)}. The site rebuilds every six hours, so this page going stale is itself the signal.</p>
 
 <h2>Standings</h2>
 ${leaderboardTable(board)}
@@ -377,6 +392,7 @@ write(
       head_commit: headCommit(),
       protocol_version: config.protocol_version,
       phase: config.phase.current,
+      liveness: live,
       counts: { questions: market.questions.length, open: market.open.length, resolved: settledCount, void: market.voided.length, seats: market.seats.size, cleared_rounds: clearedRounds },
       leaderboard: board,
       cross_model_error_correlation: corr,

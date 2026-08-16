@@ -13,12 +13,14 @@ import { join } from 'node:path';
 import { paths, loadConfig, todayUTC } from '../lib/config.js';
 import { loadMarket } from '../lib/market.js';
 import { leaderboard, errorCorrelationMatrix, crowdComparison, updateSpeed } from '../lib/scoring.js';
+import { liveness } from '../lib/liveness.js';
 
 const config = loadConfig();
 const market = loadMarket({ config, today: todayUTC() });
 
 const scoreboard = {
   generated_utc: new Date().toISOString(),
+  liveness: liveness(market),
   protocol_version: config.protocol_version,
   ranked_by: config.scoring.rank_by,
   ranking_note:

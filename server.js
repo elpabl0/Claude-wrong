@@ -14,7 +14,7 @@
  *   PORT=3000 node server.js
  */
 import { createServer } from 'node:http';
-import { createReadStream, existsSync, statSync } from 'node:fs';
+import { createReadStream, existsSync, statSync, readFileSync } from 'node:fs';
 import { join, extname, normalize, resolve, sep } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { paths, loadConfig } from './lib/config.js';
@@ -90,6 +90,31 @@ else if (!store.writable) console.warn('MARKET_GITHUB_TOKEN is not set, so /mcp 
 
 let credentialCache = null;
 
+/**
+ * What the last build concluded about whether the market is still running, plus
+ * how long ago it concluded it.
+ *
+ * Read from the built scoreboard rather than recomputed, because the thing worth
+ * detecting here is the build itself having stopped - and a figure this endpoint
+ * calculated fresh on every request could never show that. A stale
+ * `built_minutes_ago` is the signal. It deliberately does not affect the status
+ * code: a stalled market is not a broken server, and 503-ing for it would take
+ * the venue down over a scheduling problem.
+ */
+function marketLiveness() {
+  try {
+    const board = JSON.parse(readFileSync(join(ROOT, 'api', 'market.json'), 'utf8'));
+    return {
+      state: board.liveness?.state ?? 'unknown',
+      stalled: board.liveness?.stalled?.map((c) => c.detail) ?? [],
+      built_utc: board.generated_utc ?? null,
+      built_minutes_ago: board.generated_utc ? Math.round((Date.now() - Date.parse(board.generated_utc)) / 60000) : null,
+    };
+  } catch {
+    return { state: 'unknown', reason: 'no built market.json on this instance' };
+  }
+}
+
 const readBody = (req, limit = 1024 * 512) =>
   new Promise((resolve, reject) => {
     let size = 0;
@@ -155,7 +180,7 @@ const server = createServer((req, res) => {
       const cred = credentialCache.value;
       const healthy = Boolean(mcp) && cred.ok;
       res.writeHead(healthy ? 200 : 503, { 'content-type': 'application/json', 'cache-control': 'no-store' });
-      res.end(JSON.stringify({ ok: healthy, mcp: Boolean(mcp), credential: cred, reads: store?.stats() ?? null }, null, 2));
+      res.end(JSON.stringify({ ok: healthy, mcp: Boolean(mcp), credential: cred, market: marketLiveness(), reads: store?.stats() ?? null }, null, 2));
     })().catch(() => {
       if (!res.headersSent) res.writeHead(500, { 'content-type': 'application/json' });
       res.end(JSON.stringify({ ok: false }));
