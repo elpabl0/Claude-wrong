@@ -25,7 +25,7 @@ function fakeStore(files = {}) {
         .filter((p) => p.startsWith(prefix) && !p.slice(prefix.length).includes('/'))
         .map((p) => ({ name: p.slice(prefix.length), type: 'file', path: p }));
     },
-    async readJsonDir(path) {
+    async readJsonDir(path, _opts) {
       const entries = (await this.listDir(path)).filter((e) => e.name.endsWith('.json'));
       return Promise.all(entries.map(async (e) => ({ name: e.name, record: await this.getJson(e.path) })));
     },
@@ -295,4 +295,64 @@ test('a store refuses a write outside its allowlist even when asked directly', a
   });
   await assert.rejects(() => store.createFile('.github/workflows/evil.yml', 'x', 'nope'), StoreError);
   await assert.rejects(() => store.appendLine('config/market.json', '{}', 'nope'), StoreError);
+});
+
+/* ----------------------------------------------------------- read path split */
+
+test('immutable data is read from disk; a live window is not', async () => {
+  const { HybridStore } = await import('../lib/hybrid-store.js');
+  const { mkdtempSync, mkdirSync, writeFileSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+
+  const root = mkdtempSync(join(tmpdir(), 'market-'));
+  mkdirSync(join(root, 'questions'), { recursive: true });
+  writeFileSync(join(root, 'questions', 'q1.json'), JSON.stringify({ id: 'q1', claim: 'from disk' }));
+
+  let remoteCalls = 0;
+  const github = {
+    writable: true,
+    flush() {},
+    async getFile(path) { remoteCalls += 1; return { content: JSON.stringify({ id: 'q1', claim: 'from network' }), sha: 's', path }; },
+    async listDir() { remoteCalls += 1; return []; },
+    async createFile() { remoteCalls += 1; },
+    async appendLine() { remoteCalls += 1; },
+  };
+  const store = new HybridStore({ github, root });
+
+  // A question and its schedule never change, so this must not touch the network.
+  assert.equal((await store.getJson('questions/q1.json')).claim, 'from disk');
+  assert.equal(remoteCalls, 0);
+
+  // A live window's order log must always come from the source of truth, or a
+  // seat could overdraw by submitting twice into the same round.
+  await store.getFile('rounds/q1/r1/commitments.jsonl');
+  assert.equal(remoteCalls, 1);
+  await store.getFile('rounds/q1/r1/reveals.jsonl');
+  assert.equal(remoteCalls, 2);
+
+  assert.ok(store.stats().local_share > 0);
+});
+
+test('a seat registered since the last deploy can trade immediately', async () => {
+  const { HybridStore } = await import('../lib/hybrid-store.js');
+  const { mkdtempSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+
+  const written = {};
+  const github = {
+    writable: true,
+    flush() {},
+    async getFile(path) { return written[path] ? { content: written[path], sha: 's', path } : null; },
+    async listDir() { return Object.keys(written).map((p) => ({ name: p.split('/').pop(), type: 'file', path: p })); },
+    async createFile(path, content) { written[path] = content; },
+    async appendLine() {},
+  };
+  const store = new HybridStore({ github, root: mkdtempSync(join(tmpdir(), 'market-'))});
+
+  await store.createFile('seats/newbie.json', JSON.stringify({ id: 'newbie' }), 'register');
+  // Not in the checkout, and possibly not yet consistent on the API either.
+  assert.equal((await store.getJson('seats/newbie.json')).id, 'newbie');
+  assert.ok((await store.listDir('seats')).some((e) => e.name === 'newbie.json'));
 });

@@ -19,6 +19,7 @@ import { join, extname, normalize, resolve, sep } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { paths, loadConfig } from './lib/config.js';
 import { storeFromEnv } from './lib/github-store.js';
+import { HybridStore } from './lib/hybrid-store.js';
 import { createMcpHandler } from './lib/mcp.js';
 
 const PORT = Number(process.env.PORT ?? 8080);
@@ -76,7 +77,12 @@ function resolveFile(urlPath) {
 /* ------------------------------------------------------------------- MCP
  * The market is a venue, not a dataset: agents connect here and participate
  * with no human pasting anything. Mounted at /mcp over Streamable HTTP. */
-const store = storeFromEnv();
+// Reads come from the deployed checkout, writes go through GitHub. Questions and
+// their round schedules are fixed at creation, so reading them from disk is not
+// a cache - it is the record. Only a live window's order logs and a seat
+// registered since the last deploy still cross the network.
+const remote = storeFromEnv();
+const store = remote ? new HybridStore({ github: remote }) : null;
 const mcp = store ? createMcpHandler({ store, config: loadConfig() }) : null;
 if (!store) console.warn('MARKET_REPO is not set, so /mcp is disabled and the site is read-only.');
 else if (!store.writable) console.warn('MARKET_GITHUB_TOKEN is not set, so /mcp can be read but not written to.');
@@ -127,6 +133,11 @@ async function handleMcp(req, res) {
 
 const server = createServer((req, res) => {
   const path = (req.url ?? '/').split('?')[0];
+  if (path === '/healthz') {
+    res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
+    res.end(JSON.stringify({ ok: true, mcp: Boolean(mcp), writable: Boolean(store?.writable), reads: store?.stats() ?? null }));
+    return;
+  }
   if (path === '/mcp' || path === '/mcp/') {
     handleMcp(req, res).catch((err) => {
       if (!res.headersSent) res.writeHead(500, { 'content-type': 'application/json' });

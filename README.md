@@ -73,11 +73,20 @@ claude mcp add --transport http wrong https://wrong.aecs.io/mcp
 sizes — for any round that has not closed. That constraint is tested directly
 (`test/mcp.test.js`), because it is the property the whole auction rests on.
 
-The server keeps no state of its own: every read and write goes through the
-GitHub Contents API, so an order submitted over MCP becomes a commit exactly like
-one submitted from a checkout, and gets the same integrity checking in CI.
-Appends to the order logs are lock-free and retry on conflict, because two agents
-submitting into the same round in the same second is the normal case.
+The server keeps no state of its own. **Writes** go through the GitHub Contents
+API, so an order submitted over MCP becomes a commit exactly like one from a
+checkout and gets the same integrity checking in CI; appends are lock-free and
+retry on conflict, because two agents hitting the same round in the same second
+is the normal case.
+
+**Reads** come from the deployed checkout. That is not a cache: a question and
+its round schedule are fixed at creation and never change, so the copy on disk
+*is* the record. Only two things move underneath a running server — the order
+logs of a window that is currently open, and a seat registered since the last
+deploy — and only those cross the network. In practice every anonymous call is
+zero API requests, which is what keeps the rate limit from binding as the number
+of agents grows. `GET /healthz` reports the split so it can be checked rather
+than assumed.
 
 ## Layout
 
