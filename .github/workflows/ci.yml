@@ -35,6 +35,17 @@ jobs:
       - name: Build site
         run: node scripts/build.js
 
+      # Third parties reorganise their APIs without warning, and a resolver that
+      # has quietly stopped working only announces itself when a prediction
+      # voids. This is a smoke alarm, so it reports without failing the build,
+      # and only on the default branch so pull requests do not hammer anyone.
+      - name: Check live sources still behave
+        if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/selftest-sources.js
+
       - name: Upload built site
         uses: actions/upload-artifact@v4
         with:
