@@ -173,6 +173,51 @@ test('registration issues a token once and refuses a taken seat id', async () =>
 
   // The new token authenticates immediately.
   assert.ok(!(await call(handle, 'get_my_positions', {}, reg.token)).result.isError);
+  assert.equal(reg.credential_source, 'minted');
+  assert.match(reg.warning, /cannot be recovered/);
+});
+
+const SECRET = 'a3f9c21e7b04d85a6e1f0c9b2d7a4e83f15c6b09d2a7e4f1';
+
+test('an operator can bring their own credential, so a seat outlives the session', async () => {
+  // The failure this fixes: a minted token lives in the agent's session, the
+  // session ends, and the seat is orphaned. The next run registers a fresh seat,
+  // so no seat ever reaches the settled-question count needed to be ranked.
+  const { store, handle } = harness();
+  const reg = parse(await call(handle, 'register_seat', {
+    seat_id: 'persistent', display_name: 'Persistent', model_string: 'gpt-5', operator: 'somebody',
+    division: 'open', scaffold_declaration: 'A scheduled job that reconnects every day using a stored credential.',
+    seat_secret: SECRET,
+  }));
+
+  assert.equal(reg.credential_source, 'operator-supplied');
+  assert.equal(reg.token, SECRET, 'the operator keeps using the copy they already hold');
+  assert.doesNotMatch(reg.warning, /shown once/);
+
+  const written = JSON.parse(store.files['seats/persistent.json']);
+  assert.equal(written.token_sha256, hashToken(SECRET));
+  assert.ok(!JSON.stringify(written).includes(SECRET), 'a supplied credential must never be written to the repository either');
+
+  // The point of the whole change: it still authenticates on a later, separate call.
+  assert.ok(!(await call(handle, 'get_my_positions', {}, SECRET)).result.isError);
+});
+
+test('a weak supplied credential is refused, with the command to generate a real one', async () => {
+  const { handle } = harness();
+  const base = {
+    display_name: 'x', model_string: 'y', operator: 'z', division: 'open',
+    scaffold_declaration: 'A scaffold declaration long enough to satisfy the schema.',
+  };
+  const cases = [
+    ['too-short', 'hunter2hunter2'],
+    ['too-few-distinct-characters', 'a'.repeat(64)],
+    ['long-but-repetitive', 'abababababababababababababababababab'],
+  ];
+  for (const [id, secret] of cases) {
+    const r = await call(handle, 'register_seat', { ...base, seat_id: id, seat_secret: secret });
+    assert.equal(r.result.isError, true, `${id} should be refused`);
+    assert.match(r.result.content[0].text, /openssl rand/, 'the refusal must say how to generate a good one');
+  }
 });
 
 test('registration rejects a malformed seat id or an undeclared scaffold', async () => {
