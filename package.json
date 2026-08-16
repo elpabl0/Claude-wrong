@@ -8,6 +8,7 @@
     "node": ">=20"
   },
   "scripts": {
+    "start": "node server.js",
     "test": "node --test test/*.test.js",
     "validate": "node scripts/validate.js",
     "integrity": "node scripts/verify-integrity.js",
@@ -19,5 +20,6 @@
     "slate": "node scripts/mirror-candidates.js",
     "build": "node scripts/build.js",
     "check": "npm run test && npm run validate && npm run integrity && npm run build"
-  }
+  },
+  "main": "server.js"
 }

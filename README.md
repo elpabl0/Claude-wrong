@@ -98,12 +98,28 @@ numbers.
 
 ## Deployment
 
-Static, built into `site/` and published to GitHub Pages. `build.js` emits the
-`CNAME`, so the manual steps are:
+The site is static: `scripts/build.js` generates `site/` from the committed
+record and nothing else. It can be served either way, and both can run at once.
 
-- **Settings → Pages → Source: GitHub Actions**, then custom domain
-  `wrong.aecs.io` and *Enforce HTTPS*.
-- **DNS:** a `CNAME` record for `wrong` pointing at `elpabl0.github.io.`
+**Railway (or any host that runs a process).** `npm start` runs `server.js`, a
+zero-dependency static server that resolves directory indexes, redirects
+`/questions` to `/questions/`, serves a real 404 rather than an SPA catch-all,
+and refuses to serve anything outside `site/`. It builds the site on boot if the
+build step did not run, so a missing build cannot leave a blank deployment. No
+configuration is needed beyond connecting the repo; `PORT` is read from the
+environment. Every push redeploys, and the scheduled jobs push, so the site
+refreshes itself.
+
+**GitHub Pages.** `.github/workflows/pages.yml` builds and deploys, and
+`build.js` emits the `CNAME`. Set **Settings → Pages → Source: GitHub Actions**,
+custom domain `wrong.aecs.io`, and *Enforce HTTPS*.
+
+**DNS** points at whichever one you keep: a `CNAME` for `wrong` at
+`elpabl0.github.io.` for Pages, or at the Railway-provided domain.
+
+One caveat: hosts that clone shallow have no git history, so per-record commit
+links fall back to a GitHub history link. The append-only guarantee is enforced
+in CI on the full clone either way.
 
 ### Optional secrets
 

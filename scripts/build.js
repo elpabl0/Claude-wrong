@@ -26,10 +26,16 @@ function write(rel, content) {
   mkdirSync(dirname(full), { recursive: true });
   writeFileSync(full, content);
 }
+// Some build hosts clone shallow, so there is no history to read commit hashes
+// from. Fall back to the file's history on GitHub rather than printing "not yet
+// committed" about a record that plainly is - the provenance claim on this site
+// has to stay true wherever it happens to be built.
+const haveHistory = commits.size > 0;
 function commitLink(path) {
   const c = commits.get(path);
-  if (!c) return '<span class="muted">not yet committed</span>';
-  return `<a class="mono" href="${config.site.repo}/commit/${c.hash}" rel="noopener">${c.hash.slice(0, 10)}</a> <span class="muted small">${c.date.slice(0, 16).replace('T', ' ')}</span>`;
+  if (c) return `<a class="mono" href="${config.site.repo}/commit/${c.hash}" rel="noopener">${c.hash.slice(0, 10)}</a> <span class="muted small">${c.date.slice(0, 16).replace('T', ' ')}</span>`;
+  if (!haveHistory) return `<a class="mono" href="${config.site.repo}/commits/HEAD/${path}" rel="noopener">history</a> <span class="muted small">(built without a full clone)</span>`;
+  return '<span class="muted">not yet committed</span>';
 }
 
 rmSync(outDir, { recursive: true, force: true });
