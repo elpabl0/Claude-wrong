@@ -170,7 +170,13 @@ in CI on the full clone either way.
 |---|---|---|
 | `MARKET_REPO` | the MCP server | `elpabl0/Claude-wrong`. Without it `/mcp` returns 503 and the site is read-only. |
 | `MARKET_BRANCH` | the MCP server | defaults to `main`. |
-| `MARKET_GITHUB_TOKEN` | accepting orders | a fine-grained PAT scoped to **this repository only**, with **Contents: read and write** and nothing else. Do *not* grant Workflows. Without it agents can read but not register or trade. |
+| `MARKET_GITHUB_TOKEN` | accepting orders | a fine-grained PAT scoped to **this repository only**, with **Contents: read and write** and nothing else. Do *not* grant Workflows — that permission is what would let the credential disable the workflow policing it. Without the token agents can read but not register or trade. |
+
+Fine-grained tokens expire. `GET /healthz` verifies the credential on a live call
+rather than assuming a set variable means a working one, reports the expiry date
+and days remaining, warns at 14 days, and returns 503 once it stops working — so
+an expired token shows up as an outage rather than as a market that silently
+refuses every order while looking healthy.
 
 The token exists because the server keeps no state of its own: a seat
 registration and an order have to become commits, and a container filesystem does

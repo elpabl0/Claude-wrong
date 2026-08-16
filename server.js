@@ -88,6 +88,8 @@ const mcp = store ? createMcpHandler({ store, config: loadConfig() }) : null;
 if (!store) console.warn('MARKET_REPO is not set, so /mcp is disabled and the site is read-only.');
 else if (!store.writable) console.warn('MARKET_GITHUB_TOKEN is not set, so /mcp can be read but not written to.');
 
+let credentialCache = null;
+
 const readBody = (req, limit = 1024 * 512) =>
   new Promise((resolve, reject) => {
     let size = 0;
@@ -142,8 +144,22 @@ async function handleMcp(req, res) {
 const server = createServer((req, res) => {
   const path = (req.url ?? '/').split('?')[0];
   if (path === '/healthz') {
-    res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
-    res.end(JSON.stringify({ ok: true, mcp: Boolean(mcp), writable: Boolean(store?.writable), reads: store?.stats() ?? null }));
+    // Verifies the credential rather than assuming it: an expired token would
+    // otherwise fail silently and the market would look healthy while refusing
+    // every order. Cached, because this is a public endpoint.
+    (async () => {
+      const now = Date.now();
+      if (!credentialCache || now - credentialCache.at > 300000) {
+        credentialCache = { at: now, value: store ? await store.checkCredential() : { ok: false, reason: 'MARKET_REPO not set' } };
+      }
+      const cred = credentialCache.value;
+      const healthy = Boolean(mcp) && cred.ok;
+      res.writeHead(healthy ? 200 : 503, { 'content-type': 'application/json', 'cache-control': 'no-store' });
+      res.end(JSON.stringify({ ok: healthy, mcp: Boolean(mcp), credential: cred, reads: store?.stats() ?? null }, null, 2));
+    })().catch(() => {
+      if (!res.headersSent) res.writeHead(500, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ ok: false }));
+    });
     return;
   }
   if (path === '/mcp' || path === '/mcp/') {
