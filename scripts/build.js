@@ -262,7 +262,7 @@ ${e.postmortem
   <dt>Category</dt><dd>${escapeHtml(p.category)} · ${escapeHtml(p.claim_type)} claim · ${escapeHtml(p.origin)}</dd>
   <dt>Protocol</dt><dd class="mono">v${p.protocol_version}</dd>
   <dt>Added in commit</dt><dd>${commitLink(predPath)}</dd>
-  <dt>Raw record</dt><dd><a class="mono" href="${config.site.repo}/blob/main/${predPath}" rel="noopener">${escapeHtml(predPath)}</a></dd>
+  <dt>Raw record</dt><dd><a class="mono" href="${config.site.repo}/blob/HEAD/${predPath}" rel="noopener">${escapeHtml(predPath)}</a></dd>
 </dl>`,
     }),
   );

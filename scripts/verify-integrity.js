@@ -45,7 +45,9 @@ function fileHistory(dirs) {
       continue;
     }
     const m = line.match(/^([AMDT])\t(.+)$/);
-    if (m && commit) events.push({ status: m[1], path: m[2], ...commit });
+    // Only the records themselves are append-only. The README placeholders that
+    // keep these directories in git are ordinary files and may be edited.
+    if (m && commit && m[2].endsWith('.json')) events.push({ status: m[1], path: m[2], ...commit });
   }
   return events;
 }
