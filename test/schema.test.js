@@ -68,13 +68,14 @@ test('reasoning and falsifiers cannot be skipped', () => {
   assert.ok(errorsFor((r) => (r.resolution_criterion = 'it happens')).some((e) => /resolution_criterion/.test(e)));
 });
 
-test('a mirrored prediction must carry a same-day community snapshot on the same post', () => {
-  const mirrored = (over = {}) => {
+test('a mirrored prediction must carry a same-day community snapshot on the same question', () => {
+  const mirrored = (over = {}, resolver = { type: 'metaculus', post_id: 4242 }) => {
     const r = valid();
-    r.origin = 'metaculus-mirror';
-    r.resolver = { type: 'metaculus', post_id: 4242 };
+    r.origin = 'crowd-mirror';
+    r.resolver = resolver;
     r.external_reference = {
-      metaculus_post_id: 4242,
+      platform: 'metaculus',
+      question_id: '4242',
       community_probability: 0.37,
       snapshot_utc: '2026-08-24T08:55:00Z',
       url: 'https://www.metaculus.com/questions/4242/',
@@ -85,13 +86,30 @@ test('a mirrored prediction must carry a same-day community snapshot on the same
   assert.ok(mirrored().ok, mirrored().errors.join('\n'));
   assert.ok(mirrored({ snapshot_utc: '2026-08-20T08:55:00Z' }).errors.some((e) => /snapshot_utc/.test(e)));
   assert.ok(mirrored({ community_probability: 1.5 }).errors.some((e) => /community_probability/.test(e)));
+  assert.ok(mirrored({ platform: 'astrology' }).errors.some((e) => /platform/.test(e)));
 
-  const wrongResolver = valid();
-  wrongResolver.origin = 'metaculus-mirror';
-  wrongResolver.external_reference = { metaculus_post_id: 1, community_probability: 0.3, snapshot_utc: '2026-08-24T08:00:00Z', url: 'https://www.metaculus.com/questions/1/' };
-  assert.ok(validatePrediction(wrongResolver, { filename: 't.json' }).errors.some((e) => /must use the `metaculus` resolver/.test(e)));
+  // Mirroring one market and resolving against another would be invisible to a reader.
+  assert.ok(mirrored({}, { type: 'metaculus', post_id: 9999 }).errors.some((e) => /resolver targets/.test(e)));
+  assert.ok(mirrored({}, { type: 'manifold', market_id: 'abcd1234' }).errors.some((e) => /must use the `metaculus` resolver/.test(e)));
 
-  assert.ok(errorsFor((r) => (r.external_reference = { metaculus_post_id: 1 })).some((e) => /must be null/.test(e)));
+  const manifold = (over = {}) => {
+    const r = valid();
+    r.origin = 'crowd-mirror';
+    r.resolver = { type: 'manifold', market_id: 'aBcD1234xy' };
+    r.external_reference = {
+      platform: 'manifold',
+      question_id: 'aBcD1234xy',
+      community_probability: 0.44,
+      snapshot_utc: '2026-08-24T08:55:00Z',
+      url: 'https://manifold.markets/market/aBcD1234xy',
+      ...over,
+    };
+    return validatePrediction(r, { filename: 't.json' });
+  };
+  assert.ok(manifold().ok, manifold().errors.join('\n'));
+  assert.ok(manifold({ question_id: 'someOtherId' }).errors.some((e) => /resolver targets/.test(e)));
+
+  assert.ok(errorsFor((r) => (r.external_reference = { platform: 'metaculus' })).some((e) => /must be null/.test(e)));
 });
 
 test('validation reports rather than throws on rubbish input', () => {

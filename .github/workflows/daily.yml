@@ -41,6 +41,7 @@ jobs:
       - name: Resolve everything due
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          METACULUS_TOKEN: ${{ secrets.METACULUS_TOKEN }}
         run: node scripts/resolve.js
 
       # Sources rot. Probing open predictions weekly means a dead URL surfaces
@@ -50,6 +51,7 @@ jobs:
         if: github.event.schedule == '17 6 * * *' && github.event.inputs.probe != 'false'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          METACULUS_TOKEN: ${{ secrets.METACULUS_TOKEN }}
         run: node scripts/resolve.js --probe || true
 
       - name: Validate what was written

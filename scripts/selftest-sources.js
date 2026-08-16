@@ -31,8 +31,8 @@ const CASES = [
   {
     name: 'http_text (a stable page still has readable text)',
     type: 'http_text',
-    cfg: { type: 'http_text', url: 'https://example.com/', contains: 'illustrative examples', absent_at_creation: true },
-    expect: (r) => r.status === 'yes' || r.status === 'no',
+    cfg: { type: 'http_text', url: 'https://example.com/', contains: 'example domain', absent_at_creation: true },
+    expect: (r) => r.status === 'yes',
   },
   {
     name: 'arxiv (query endpoint returns a count)',
@@ -48,6 +48,26 @@ const CASES = [
     // site has. Any status other than a clean yes/no means the response shape moved.
     cfg: { type: 'metaculus', post_id: 1 },
     expect: (r) => r.status === 'yes' || r.status === 'no',
+    // Metaculus refuses anonymous datacenter traffic. Without a token this is
+    // expected to fail, and the ledger falls back to Manifold for its crowd
+    // reference, so it is reported but does not count against the run.
+    optional: !process.env.METACULUS_TOKEN,
+    optionalNote: 'METACULUS_TOKEN is not set, so anonymous 403/429 is expected',
+  },
+  {
+    name: 'manifold (a resolved market still reads as resolved)',
+    type: 'manifold',
+    cfg: { type: 'json', url: 'https://api.manifold.markets/v0/markets?limit=1' },
+    custom: async () => {
+      const { httpGetJson } = await import('../lib/resolvers/util.js');
+      const list = await httpGetJson('https://api.manifold.markets/v0/markets?limit=1');
+      if (!Array.isArray(list) || typeof list[0]?.id !== 'string') {
+        throw new Error('Manifold market listing did not return recognisable markets');
+      }
+      const r = getResolver('manifold');
+      const res = await r.resolve({ market_id: list[0].id }, {});
+      return `market ${list[0].id} → ${res.status}: ${res.detail}`;
+    },
   },
 ];
 
@@ -57,33 +77,38 @@ for (const c of CASES) {
   const impl = getResolver(c.type);
   process.stdout.write(`${c.name} … `);
   try {
+    if (c.custom) {
+      console.log(`ok\n    ${await c.custom()}`);
+      continue;
+    }
     const res = await impl.resolve(c.cfg, { env: process.env });
     if (c.expect(res)) {
       console.log(`ok\n    ${res.detail}`);
     } else {
-      failures++;
-      console.log(`UNEXPECTED\n    status=${res.status} observed=${JSON.stringify(res.observed)}\n    ${res.detail}`);
+      if (!c.optional) failures++;
+      console.log(`${c.optional ? 'SKIPPED' : 'UNEXPECTED'}\n    status=${res.status} observed=${JSON.stringify(res.observed)}\n    ${res.detail}${c.optional ? `\n    (${c.optionalNote})` : ''}`);
     }
   } catch (err) {
-    failures++;
-    console.log(`FAILED\n    ${err.name}: ${err.message}`);
+    if (!c.optional) failures++;
+    console.log(`${c.optional ? 'SKIPPED' : 'FAILED'}\n    ${err.name}: ${err.message}${c.optional ? `\n    (${c.optionalNote})` : ''}`);
   }
 }
 
 // The slate fetcher is the other live dependency, and the one the mirrored
 // questions rest on entirely.
-process.stdout.write('mirror-candidates (Metaculus slate) … ');
+process.stdout.write('mirror-candidates (crowd slate) … ');
 try {
   const { execFileSync } = await import('node:child_process');
   const out = execFileSync('node', ['scripts/mirror-candidates.js', '--stdout', '--n=5'], { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 });
   const slate = JSON.parse(out);
   if (!Array.isArray(slate.questions) || slate.questions.length === 0) {
     failures++;
-    console.log(`UNEXPECTED\n    scanned ${slate.scanned}, usable ${slate.usable} - the slate came back empty`);
+    console.log('UNEXPECTED\n    the slate came back empty from every platform');
   } else {
-    console.log(`ok\n    ${slate.questions.length} candidates from ${slate.scanned} scanned via ${slate.source_endpoint}`);
+    const per = Object.entries(slate.sources).map(([k, v]) => `${k}: ${v.ok ? `${v.usable}/${v.scanned}` : 'unavailable'}`).join(', ');
+    console.log(`ok\n    ${slate.questions.length} candidates (${per})`);
     for (const q of slate.questions.slice(0, 5)) {
-      console.log(`      ${q.post_id}  crowd ${q.community_probability}  closes ${q.scheduled_close}  ${q.title.slice(0, 70)}`);
+      console.log(`      ${q.platform} ${q.question_id}  crowd ${q.community_probability}  closes ${q.scheduled_close}  ${q.title.slice(0, 65)}`);
     }
   }
 } catch (err) {

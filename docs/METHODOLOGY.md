@@ -34,11 +34,11 @@ is committed. It carries:
 - the exact **model string** that wrote it, and the **protocol version** in force.
 
 The resolver is the part that matters. A criterion that needs someone to
-interpret it is a criterion that can be interpreted favourably later. Five
-resolver types are permitted, all of them mechanical: a Metaculus question's own
-resolution, a value at a JSON pointer compared to a threshold, the existence of a
-matching release tag on GitHub, a pattern in the visible text of a page, and a
-count of arXiv submissions matching a fixed query.
+interpret it is a criterion that can be interpreted favourably later. Six
+resolver types are permitted, all of them mechanical: the resolution of a
+Metaculus question or a Manifold market, a value at a JSON pointer compared to a
+threshold, the existence of a matching release tag on GitHub, a pattern in the
+visible text of a page, and a count of arXiv submissions matching a fixed query.
 
 ## How resolution works
 
@@ -89,13 +89,23 @@ deliberately *not* the original reasoning. A fresh instance writes the analysis
 from that. It cannot reconstruct and then defend the original argument, because
 it has never seen it.
 
-**A fixed share of questions is mirrored from Metaculus.** At least three of
-every ten come from open Metaculus markets, with the community's probability
-recorded on the same day. Both forecasts are then scored on the same outcome.
-This is the only comparison here that is not self-referential. The crowd's number
-is fetched by a script into a committed slate, and validation rejects any
-mirrored prediction whose recorded community probability does not match that
-slate exactly — so the questions can be chosen, but the benchmark cannot.
+**A fixed share of questions is mirrored from a human crowd.** At least three of
+every ten come from open Metaculus questions or Manifold markets, with the
+community's probability recorded on the same day. Both forecasts are then scored
+on the same outcome. This is the only comparison here that is not
+self-referential. The crowd's number is fetched by a script into a committed
+slate, and validation rejects any mirrored prediction whose recorded community
+probability does not match that slate exactly — so the questions can be chosen,
+but the benchmark cannot.
+
+Two platforms are supported because one of them is not reliably reachable.
+Metaculus is the better benchmark — real forecasters, real reputations — but its
+API returns 403 or 429 to datacenter traffic unless an API token is configured,
+and a ledger that resolves itself on a schedule cannot depend on a source that
+refuses its own runner. Manifold's API is open and its markets carry enough
+traders to be a real opponent. The slate takes whichever answers, records which
+platform each question came from, and the scoring reports the two separately as
+well as together.
 
 ## Guarding against a flattering question set
 
@@ -124,8 +134,8 @@ stays as it is, observed frequency should exceed mean predicted probability. Thi
 is why every batch is required to contain continuity claims: they are the control
 arm, and without a quota they would simply never get written.
 
-**H3 — worse than the crowd.** On mirrored questions, paired against the
-Metaculus community on the same day, the model's Brier score should be higher.
+**H3 — worse than the crowd.** On mirrored questions, paired against the human
+forecasting community on the same day, the model's Brier score should be higher.
 
 Each is reported with a 95% interval and marked *supported*, *contradicted*,
 *undecided* or *not enough data yet*. Twenty resolutions are needed before any of
@@ -146,7 +156,9 @@ guide to whether an effect is worth talking about, not a p-value.
   its exact model string and every breakdown segments on it, but a change still
   costs statistical power.
 - **Resolver brittleness.** A JSON endpoint can change shape and a page can be
-  rewritten. Open predictions have their sources probed on a schedule so that a
+  rewritten. A live self-test exercises every resolver type against a known-good
+  source on each push, precisely because that failure is otherwise silent. A live self-test exercises every resolver type against a known-good
+  source on each push, precisely because that failure is otherwise silent. Open predictions have their sources probed on a schedule so that a
   dead source surfaces early rather than at resolution time, but the risk is real
   and the void rate is where it will show up.
 - **Correlated questions.** Ten questions written in one sitting by one model are

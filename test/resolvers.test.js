@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { getResolver, RESOLVERS } from '../lib/resolvers/index.js';
 import { jsonPointer, compare, SourceError, CriterionError, httpGetJson } from '../lib/resolvers/util.js';
 import { normaliseResolution, communityProbability, extractQuestion } from '../lib/resolvers/metaculus.js';
+import { normaliseResolution as manifoldResolution, communityProbability as manifoldCrowd } from '../lib/resolvers/manifold.js';
+import { authHeadersFor } from '../lib/resolvers/util.js';
 import { textContent } from '../lib/resolvers/http_text.js';
 import { parseTotalResults } from '../lib/resolvers/arxiv.js';
 import { loadConfig } from '../lib/config.js';
@@ -132,6 +134,47 @@ test('community probability is read from any of the shapes Metaculus has used', 
   assert.equal(communityProbability({ community_prediction: { full: { q2: 0.31 } } }), 0.31);
   assert.equal(communityProbability({}), null);
   assert.equal(communityProbability({ aggregations: { recency_weighted: { latest: { centers: [1.4] } } } }), null);
+});
+
+/* ---------------------------------------------------------------- manifold */
+
+test('manifold stays pending until the market resolves, and voids on a non-binary outcome', async () => {
+  const r = getResolver('manifold');
+  const cfg = { type: 'manifold', market_id: 'aBcD1234xy' };
+  assert.deepEqual(r.validateConfig(cfg), []);
+
+  assert.equal((await r.resolve(cfg, ctx({ id: 'aBcD1234xy', isResolved: false, probability: 0.4 }))).status, 'pending');
+  assert.equal((await r.resolve(cfg, ctx({ isResolved: true, resolution: 'YES' }))).status, 'yes');
+  assert.equal((await r.resolve(cfg, ctx({ isResolved: true, resolution: 'NO' }))).status, 'no');
+  assert.equal((await r.resolve(cfg, ctx({ isResolved: true, resolution: 'CANCEL' }))).status, 'void');
+  // MKT resolves to a probability, not an outcome, so it cannot score a binary forecast.
+  assert.equal((await r.resolve(cfg, ctx({ isResolved: true, resolution: 'MKT', resolutionProbability: 0.6 }))).status, 'void');
+
+  assert.equal((await r.resolve({ ...cfg, expect: 'no' }, ctx({ isResolved: true, resolution: 'NO' }))).status, 'yes');
+  assert.ok(r.validateConfig({ market_id: 'no spaces allowed' }).length > 0);
+  assert.ok(r.validateConfig({ market_id: 'ok1234', expect: 'perhaps' }).length > 0);
+});
+
+test('manifold resolution and crowd probability normalise as expected', () => {
+  assert.equal(manifoldResolution({ isResolved: false }).status, 'pending');
+  assert.equal(manifoldResolution({ isResolved: true, resolution: 'yes' }).status, 'yes');
+  assert.throws(() => manifoldResolution(null), SourceError);
+  assert.equal(manifoldCrowd({ probability: 0.62 }), 0.62);
+  assert.equal(manifoldCrowd({ probability: 4 }), null);
+  assert.equal(manifoldCrowd({}), null);
+});
+
+/* --------------------------------------------------------------------- auth */
+
+test('credentials are attached only to the hosts that refuse anonymous traffic', () => {
+  const env = { GITHUB_TOKEN: 'gh', METACULUS_TOKEN: 'mc' };
+  assert.match(authHeadersFor('https://api.github.com/repos/a/b', env).authorization, /^Bearer gh$/);
+  assert.match(authHeadersFor('https://www.metaculus.com/api/posts/1/', env).authorization, /^Token mc$/);
+  assert.deepEqual(authHeadersFor('https://api.manifold.markets/v0/markets', env), {});
+  assert.deepEqual(authHeadersFor('https://example.com/', env), {});
+  assert.deepEqual(authHeadersFor('not a url', env), {});
+  // Without credentials configured, nothing is sent and the call simply fails as a source error.
+  assert.deepEqual(authHeadersFor('https://api.github.com/repos/a/b', {}), {});
 });
 
 /* ----------------------------------------------------------- github_release */

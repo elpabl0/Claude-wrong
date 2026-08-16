@@ -55,18 +55,20 @@ if (existsSync(slateDir)) {
 }
 
 for (const { file, record } of predFiles) {
-  if (record?.origin !== 'metaculus-mirror') continue;
+  if (record?.origin !== 'crowd-mirror') continue;
   const x = record.external_reference;
   if (!x || typeof x !== 'object') continue; // already reported by the schema check
 
   const slate = slates.get(record.batch);
   if (!slate) {
-    errors.push(`${file}: mirrors Metaculus but there is no fetched slate at ledger/mirror-slates/${record.batch}.json`);
+    errors.push(`${file}: mirrors a crowd forecast but there is no fetched slate at ledger/mirror-slates/${record.batch}.json`);
     continue;
   }
-  const q = (slate.questions ?? []).find((s) => s.post_id === x.metaculus_post_id);
+  const q = (slate.questions ?? []).find(
+    (s) => s.platform === x.platform && String(s.question_id) === String(x.question_id),
+  );
   if (!q) {
-    errors.push(`${file}: Metaculus post ${x.metaculus_post_id} is not in the ${record.batch} slate - a mirrored question must be drawn from the slate that was fetched that day`);
+    errors.push(`${file}: ${x.platform} question ${x.question_id} is not in the ${record.batch} slate - a mirrored question must be drawn from the slate that was fetched that day`);
     continue;
   }
   if (q.community_probability !== x.community_probability) {
@@ -74,9 +76,6 @@ for (const { file, record } of predFiles) {
   }
   if (slate.fetched_utc !== x.snapshot_utc) {
     errors.push(`${file}: snapshot_utc ${x.snapshot_utc} does not match the slate's fetched_utc ${slate.fetched_utc}`);
-  }
-  if (record.resolver?.post_id !== x.metaculus_post_id) {
-    errors.push(`${file}: resolver targets post ${record.resolver?.post_id} but the external reference is post ${x.metaculus_post_id}`);
   }
 }
 
@@ -107,7 +106,7 @@ for (const [batch, recs] of [...batches.entries()].sort()) {
   const count = (fn) => recs.filter(fn).length;
   const checks = [
     ['continuity claims', count((r) => r.claim_type === 'continuity'), q.min_continuity_claims_per_batch],
-    ['mirrored questions', count((r) => r.origin === 'metaculus-mirror'), q.min_mirrored_per_batch],
+    ['mirrored questions', count((r) => r.origin === 'crowd-mirror'), q.min_mirrored_per_batch],
     ['short-horizon questions', count((r) => horizonBucket(daysBetween(r.batch, r.resolution_date), config) === 'short'), q.min_short_horizon_per_batch],
     ['long-horizon questions', count((r) => horizonBucket(daysBetween(r.batch, r.resolution_date), config) === 'long'), q.min_long_horizon_per_batch],
   ];

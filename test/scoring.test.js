@@ -113,7 +113,7 @@ test('breakdown groups and sorts by sample size', () => {
 test('mirror comparison pairs the model against the crowd on the same outcome', () => {
   const mk = (self, crowd, outcome) =>
     entry(self, outcome, {
-      prediction: { origin: 'metaculus-mirror', external_reference: { community_probability: crowd, metaculus_post_id: 1 }, question: 'q' },
+      prediction: { origin: 'crowd-mirror', external_reference: { platform: 'metaculus', community_probability: crowd, question_id: '1' }, question: 'q' },
     });
   const m = mirrorComparison([mk(0.9, 0.6, 0), mk(0.8, 0.5, 0)]);
   assert.equal(m.n, 2);

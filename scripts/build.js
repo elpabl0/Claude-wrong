@@ -165,21 +165,23 @@ ${breakdownTable(report.by_claim_type, 'Claim type')}
 <h2>By question origin</h2>${breakdownTable(report.by_origin, 'Origin')}
 
 <h2>Against the crowd</h2>
-<p>Mirrored questions are taken from open Metaculus markets, with the community's probability recorded on the same day the forecast was made. Both are then scored on the same outcome. This is the only number here that is not self-referential.</p>
+<p>Mirrored questions are taken from open Metaculus and Manifold markets, with the community's probability recorded on the same day the forecast was made. Both are then scored on the same outcome. This is the only number here that is not self-referential.</p>
 ${report.mirror.n === 0
       ? '<p class="muted">No mirrored questions have resolved yet.</p>'
       : `<div class="tiles">
   <div class="tile"><div class="k">This model</div><div class="v">${fmt.num(report.mirror.selfBrier)}</div><div class="s">mean Brier, ${report.mirror.n} paired questions</div></div>
-  <div class="tile"><div class="k">Metaculus community</div><div class="v">${fmt.num(report.mirror.crowdBrier)}</div><div class="s">same questions, same days</div></div>
+  <div class="tile"><div class="k">The crowd</div><div class="v">${fmt.num(report.mirror.crowdBrier)}</div><div class="s">same questions, same days</div></div>
   <div class="tile"><div class="k">Difference</div><div class="v">${fmt.signed(report.mirror.difference.mean)}</div><div class="s">positive means the model was worse</div></div>
 </div>
 <div class="scroll-x"><table>
-<thead><tr><th>Question</th><th class="num">model</th><th class="num">crowd</th><th>outcome</th><th class="num">model Brier</th><th class="num">crowd Brier</th></tr></thead>
+<thead><tr><th>Question</th><th>platform</th><th class="num">model</th><th class="num">crowd</th><th>outcome</th><th class="num">model Brier</th><th class="num">crowd Brier</th></tr></thead>
 <tbody>${report.mirror.pairs
         .map(
-          (p) => `<tr><td><a href="/p/${p.id}/">${escapeHtml(p.question)}</a></td><td class="num">${fmt.pct(p.self)}</td><td class="num">${fmt.pct(p.crowd)}</td><td>${p.outcome ? 'yes' : 'no'}</td><td class="num">${fmt.num(p.selfBrier)}</td><td class="num">${fmt.num(p.crowdBrier)}</td></tr>`,
+          (p) => `<tr><td><a href="/p/${p.id}/">${escapeHtml(p.question)}</a></td><td>${escapeHtml(p.platform ?? '—')}</td><td class="num">${fmt.pct(p.self)}</td><td class="num">${fmt.pct(p.crowd)}</td><td>${p.outcome ? 'yes' : 'no'}</td><td class="num">${fmt.num(p.selfBrier)}</td><td class="num">${fmt.num(p.crowdBrier)}</td></tr>`,
         )
         .join('')}</tbody></table></div>`}
+
+${report.by_crowd_platform.length ? `<h3>By crowd platform</h3>${breakdownTable(report.by_crowd_platform, 'Platform')}` : ''}
 
 <h2>By model version</h2>
 <p>If the underlying model changes mid-experiment, the series is measuring two different things. Every prediction records the exact model string it was written by, and the score segments on it.</p>
@@ -230,8 +232,8 @@ for (const e of ledger.entries) {
   <div class="tile"><div class="k">Probability of yes</div><div class="v">${fmt.pct(p.probability, 0)}</div><div class="s">stated ${escapeHtml(fmt.date(p.created_utc))}</div></div>
   <div class="tile"><div class="k">Resolves</div><div class="v" style="font-size:1.25rem">${escapeHtml(p.resolution_date)}</div><div class="s">${e.horizonDays}-day horizon (${e.horizonBucket})</div></div>
   <div class="tile"><div class="k">Status</div><div class="v" style="font-size:1.25rem">${e.state === 'resolved' ? r.status.toUpperCase() : e.state}</div><div class="s">${e.brier !== null ? `Brier ${fmt.num(e.brier, 4)}` : e.state === 'open' ? `${e.daysUntilResolution} days to go` : '—'}</div></div>
-  ${p.origin === 'metaculus-mirror'
-        ? `<div class="tile"><div class="k">Metaculus community</div><div class="v">${fmt.pct(p.external_reference.community_probability)}</div><div class="s">same day · <a href="${escapeHtml(p.external_reference.url)}" rel="noopener">market</a></div></div>`
+  ${p.origin === 'crowd-mirror'
+        ? `<div class="tile"><div class="k">${escapeHtml(p.external_reference.platform)} crowd</div><div class="v">${fmt.pct(p.external_reference.community_probability)}</div><div class="s">same day · <a href="${escapeHtml(p.external_reference.url)}" rel="noopener">market</a></div></div>`
         : ''}
 </div>
 

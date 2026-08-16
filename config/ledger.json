@@ -81,7 +81,7 @@
       "excluded from the Brier score but the void rate is shown on the front page,",
       "so that quietly voiding inconvenient questions would itself be visible."
     ],
-    "allowed_resolver_types": ["metaculus", "json", "github_release", "http_text", "arxiv"]
+    "allowed_resolver_types": ["metaculus", "manifold", "json", "github_release", "http_text", "arxiv"]
   },
   "calibration": {
     "bins": [
@@ -112,8 +112,8 @@
       "predicted_direction": "observed > predicted"
     },
     "H3": {
-      "claim": "The forecaster is worse calibrated than the Metaculus community on the same questions on the same day.",
-      "test": "Paired mean Brier on origin=metaculus-mirror predictions, self versus community snapshot taken at creation time.",
+      "claim": "The forecaster is worse calibrated than the human forecasting crowd on the same questions on the same day.",
+      "test": "Paired mean Brier on origin=crowd-mirror predictions, self versus the community snapshot taken at creation time on Metaculus or Manifold.",
       "predicted_direction": "self Brier > community Brier"
     }
   }

@@ -29,10 +29,10 @@ against the model.
 | Risk | Control |
 |---|---|
 | Quietly softening a prediction after the fact | Records are append-only. `scripts/verify-integrity.js` walks the whole git history on every push and fails if any record was modified, deleted, added twice, or committed on or after its own resolution date. |
-| Resolving ambiguously in your own favour | Resolution is a script with no discretion. Five mechanical resolver types only; a criterion that needs interpretation is not admissible. |
+| Resolving ambiguously in your own favour | Resolution is a script with no discretion. Six mechanical resolver types only; a criterion that needs interpretation is not admissible. |
 | Voiding the ones you got wrong | Void happens only when a source cannot be read for 14 days. It is recorded automatically with the failure log, and the void rate is on the front page. |
 | Marking your own homework on a miss | Post-mortems are written by a separate instance from a brief that deliberately omits the original reasoning. |
-| Grading on a curve of your own making | At least three questions per batch are mirrored from open Metaculus markets, scored against the community's probability from the same day. |
+| Grading on a curve of your own making | At least three questions per batch are mirrored from open Metaculus questions or Manifold markets, scored against the community's probability from the same day. |
 | Choosing easy questions | Category quotas, continuity-claim minimums, horizon minimums and a cap on near-certainties, all fixed in the repo before the first batch and enforced in CI. |
 | Typing a flattering crowd number | The community probability must match a slate fetched by a script and committed before the batch was written. |
 | The model changing mid-experiment | Every record logs its exact model string; every breakdown segments on it. |
@@ -44,7 +44,7 @@ config/ledger.json         the fixed rules: quotas, hypotheses, grace periods
 ledger/predictions/        one immutable JSON record per prediction
 ledger/resolutions/        one record per resolved prediction, written by the resolver
 ledger/attempts/           append-only log of every resolution attempt
-ledger/mirror-slates/      Metaculus questions and crowd probabilities, as fetched
+ledger/mirror-slates/      crowd questions and their probabilities, exactly as fetched
 ledger/postmortems/        written by a different instance from the one that missed
 lib/                       schema, resolvers, scoring, rendering. No dependencies.
 scripts/                   validate · resolve · build · status · verify-integrity
@@ -80,9 +80,9 @@ node scripts/resolve.js --dry-run --id=<prediction-id> --today=<YYYY-MM-DD>
 
 Two automated jobs and one scheduled model run:
 
-1. **`.github/workflows/slate.yml`** — Mondays 07:05 UTC. Fetches open Metaculus
-   binary questions with their community probabilities and commits the slate. No
-   model involved.
+1. **`.github/workflows/slate.yml`** — Mondays 07:05 UTC. Fetches open binary
+   questions from Metaculus and Manifold with their community probabilities and
+   commits the slate. No model involved.
 2. **A Claude routine, Mondays ~08:00 UTC** — reads `docs/PROTOCOL.md`, runs
    `scripts/status.js`, writes ten predictions against the quotas, and commits
    them. This is the only step with a model in it.
@@ -102,6 +102,15 @@ so the only manual steps are:
 - **DNS:** a `CNAME` record for `wrong` pointing at `elpabl0.github.io.`
 - **Settings → Pages → Custom domain:** `wrong.aecs.io`, then enable *Enforce
   HTTPS* once the certificate is issued.
+
+### Optional: `METACULUS_TOKEN`
+
+Metaculus returns 403/429 to datacenter traffic, so without a token the crowd
+slate is drawn from Manifold alone and the `metaculus` resolver cannot run in
+CI. Adding a Metaculus API token as a repository secret named `METACULUS_TOKEN`
+turns the better of the two benchmarks back on. Everything works without it;
+`scripts/selftest-sources.js` reports the Metaculus case as skipped rather than
+failed when the secret is absent.
 
 ## A note on the score
 

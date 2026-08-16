@@ -1,9 +1,9 @@
-name: Fetch Metaculus slate
+name: Fetch crowd slate
 
-# Fetches the open Metaculus questions and their community probabilities, and
-# commits the result. The authoring instance must draw its mirrored questions
-# from this file: validation rejects any mirrored prediction whose recorded
-# community probability does not match the slate exactly.
+# Fetches open crowd-forecast questions and their community probabilities from
+# Metaculus and Manifold, and commits the result. The authoring instance must
+# draw its mirrored questions from this file: validation rejects any mirrored
+# prediction whose recorded community probability does not match the slate.
 #
 # The point is that the forecaster chooses which questions to mirror but never
 # gets to choose what the crowd said. Fetching happens here, in a job with no
@@ -42,6 +42,10 @@ jobs:
           node-version: '22'
 
       - name: Fetch slate
+        env:
+          # Optional. Without it Metaculus returns 403/429 to datacenter traffic
+          # and the slate falls back to Manifold alone.
+          METACULUS_TOKEN: ${{ secrets.METACULUS_TOKEN }}
         run: |
           BATCH="${{ inputs.batch }}"
           if [ -z "$BATCH" ]; then BATCH="$(date -u +%Y-%m-%d)"; fi
@@ -56,7 +60,7 @@ jobs:
             exit 0
           fi
           git add ledger/mirror-slates
-          git commit -m "slate: Metaculus candidates for $(date -u +%Y-%m-%d)" -m "Fetched by scripts/mirror-candidates.js. Community probabilities recorded as read."
+          git commit -m "slate: crowd candidates for $(date -u +%Y-%m-%d)" -m "Fetched by scripts/mirror-candidates.js. Community probabilities recorded as read."
           for attempt in 1 2 3 4; do
             git push && exit 0
             sleep $((2 ** attempt))

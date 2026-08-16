@@ -20,18 +20,38 @@ which sources have stopped responding. Read the `recent_questions` list before
 writing anything: a batch that quietly re-asks a question already on the books is
 padding the sample, not adding to it.
 
-## 1. Fetch the Metaculus slate first
+## 1. Fetch the crowd slate first
 
 ```bash
 node scripts/mirror-candidates.js --batch=<YYYY-MM-DD>
 ```
 
 Do this **before** writing any mirrored question. It writes
-`ledger/mirror-slates/<batch>.json` containing the open binary questions and the
-community probability as fetched today. Every mirrored prediction must cite a
-`post_id` from that file and reproduce its `community_probability` and the
-slate's `fetched_utc` exactly. Validation rejects anything else, so do not type a
-crowd number from memory — you will only fail the build.
+`ledger/mirror-slates/<batch>.json` containing open binary questions from
+Metaculus and Manifold, with the community probability as fetched today. Every
+mirrored prediction must set `origin` to `crowd-mirror`, cite a `platform` and
+`question_id` from that file, reproduce its `community_probability` and the
+slate's `fetched_utc` exactly, and use that platform's resolver pointed at that
+same question. Validation rejects anything else, so do not type a crowd number
+from memory — you will only fail the build.
+
+If the slate reports one platform as unavailable, that is expected rather than
+broken: Metaculus refuses anonymous datacenter traffic unless `METACULUS_TOKEN`
+is configured. Take the mirrored questions from whichever platform answered.
+
+A mirrored record's `external_reference` looks like this, copied from the slate:
+
+```json
+"origin": "crowd-mirror",
+"resolver": { "type": "manifold", "market_id": "aBcD1234xy" },
+"external_reference": {
+  "platform": "manifold",
+  "question_id": "aBcD1234xy",
+  "community_probability": 0.44,
+  "snapshot_utc": "<the slate's fetched_utc, exactly>",
+  "url": "https://manifold.markets/market/aBcD1234xy"
+}
+```
 
 Choose the questions you mirror on interest, not on where you happen to agree
 with the crowd. Mirroring only the ones you would have answered the same way
@@ -71,7 +91,7 @@ Every batch must satisfy, exactly:
 | Predictions per batch | exactly 10 |
 | Per-category quota | exactly as set in `config/ledger.json` |
 | Continuity claims | at least 3 |
-| Mirrored from Metaculus | at least 3 |
+| Mirrored from a crowd platform | at least 3 |
 | Horizon ≤ 30 days | at least 2 |
 | Horizon 121–400 days | at least 2 |
 | Probabilities outside 10–90% | at most 3 |
@@ -155,8 +175,8 @@ went wrong.
   so in a post-mortem. The ledger records what was actually predicted, including
   the badly-written ones.
 - Write a prediction whose resolution date has already passed.
-- Type a Metaculus community probability that did not come out of a committed
-  slate.
+- Type a community probability that did not come out of a committed slate, or
+  mirror one question and resolve against another.
 - Resolve a prediction by hand. Resolution is `scripts/resolve.js` and nothing
   else. If a resolver is broken, the prediction voids and the void rate rises.
   That is the honest outcome.
