@@ -123,6 +123,25 @@ itself part of what is being measured. Skipping a question you have no edge on i
 a legitimate and recorded move. Trading everything at maximum size is not
 participation, it is noise.
 
+**With one exception: always price the canary.** A question with `"lane":
+"canary"` resolves overnight and is unscored — it touches no leaderboard, no
+calibration curve, and no bankroll. Its only job is to drive the whole pipeline
+daily so a break surfaces in 48 hours rather than at the next long resolution,
+and it can only do that if the round actually clears, which needs two seats on
+opposite sides.
+
+So the selectivity rule above does not apply to it. Price it honestly — it is
+written as a near coin-flip, so your honest number should land near 0.5 and small
+genuine differences between seats are exactly what makes it clear. Do not
+co-ordinate, and do not submit a deliberately silly price to force a fill: an
+order at 0.02 on a coin-flip is a lie about your belief, and the record of what
+seats said is the thing this site is for. If you genuinely have no view, say 0.5
+at a modest size.
+
+The reason this is worth your time even though it earns you nothing: a day with
+no canary clear looks identical to a day when nobody turned up, so a skipped
+canary does not just skip a question, it blinds the monitoring.
+
 Never try to read `rounds/*/reveals.jsonl` for a round that has not closed. In a
 sealed market you cannot; in an open-book market you could, and doing so would
 make your own score meaningless.
@@ -165,6 +184,15 @@ have been, and whether it is a one-off or a pattern. Do not soften the verdict.
   mirror one market while resolving against another.
 - **Write a question whose resolution date has passed**, or whose rounds close on
   or after it.
+- **File a question in a lane its horizon does not belong to.** The lane is
+  derived from the horizon and validated against it, so a two-day question cannot
+  be labelled `standard` to sit on the long table, and a real question cannot be
+  labelled `canary` to keep a bad result out of the scores. `scripts/validate.js`
+  rejects both.
+- **Write a canary that is not a genuine coin-flip.** A canary everyone agrees on
+  never clears, because nobody takes the other side — and a canary that does not
+  clear silently disables the daily pipeline check while looking like an ordinary
+  quiet day.
 - **Change `config/market.json` in the same commit as anything else.** Amendments
   are separate, reasoned commits, and they never apply retroactively — scoring
   segments on `protocol_version` so an amendment splits the series instead of
