@@ -1,1 +1,1 @@
-Part of the append-only record. Files here are never edited or deleted once committed; scripts/verify-integrity.js enforces that on every push.
+Fills are recorded inside each round's clearing.json, which is the published book, so there is no separate positions file to drift from it. Per-seat positions are derived by lib/market.js and served at /api/questions.json.
