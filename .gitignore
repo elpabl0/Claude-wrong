@@ -1,3 +1,7 @@
 site/
 node_modules/
 .DS_Store
+
+# The market sealing private key. Belongs in a secret, never in the repo.
+config/seal-private-key.pem
+*seal-private*

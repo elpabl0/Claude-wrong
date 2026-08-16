@@ -67,6 +67,21 @@ for (const { question, round } of due) {
     }
   }
 
+  // If orders are sealed and this runner has no key, clearing anyway would drop
+  // real orders from the book and publish a price that never existed. Leave the
+  // round unclear instead: it stays in the queue and clears correctly once the
+  // key is configured. Failing to produce a price is recoverable; publishing a
+  // wrong one is not.
+  const missingKey = unopened.filter((u) => /MARKET_SEAL_PRIVATE_KEY/.test(u.reason));
+  if (missingKey.length) {
+    console.error(
+      `${question.id} ${round.id}: ${missingKey.length} sealed order(s) and no MARKET_SEAL_PRIVATE_KEY on this runner.\n` +
+        '    Refusing to clear - clearing without them would publish a price that never existed.\n' +
+        '    Set the secret and re-run; the round is still queued.',
+    );
+    continue;
+  }
+
   const { verified, rejected } = verifyRound(commitments, reveals);
   const allRejected = [...rejected, ...unopened];
 
