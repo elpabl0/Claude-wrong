@@ -97,13 +97,45 @@ async function fetchMetaculus() {
 
 /* ---------------------------------------------------------------- Manifold */
 
-const MANIFOLD_URL = 'https://api.manifold.markets/v0/markets?limit=1000';
+// `/v0/markets` returns newest-first, which is mostly thin, joky markets nobody
+// is trading. Searching by liquidity and popularity instead gets the markets
+// that actually have a crowd behind them - which is the entire point of using
+// one as a benchmark. The plain listing stays as a fallback.
+const MANIFOLD_SEARCHES = ['liquidity', 'most-popular', 'close-date'].map(
+  (sort) => `https://api.manifold.markets/v0/search-markets?term=&sort=${sort}&filter=open&contractType=BINARY&limit=250`,
+);
+const MANIFOLD_FALLBACK = 'https://api.manifold.markets/v0/markets?limit=1000';
+
+/** A market nobody is trading is not a crowd. */
+const MIN_TRADERS = 25;
 
 async function fetchManifold() {
-  try {
-    const results = await httpGetJson(MANIFOLD_URL, { retries: 2, timeoutMs: 30000 });
-    if (!Array.isArray(results)) return { ok: false, endpoint: MANIFOLD_URL, scanned: 0, questions: [], error: 'response was not an array' };
+  const endpoints = [];
+  const raw = new Map();
+  const failures = [];
 
+  for (const url of [...MANIFOLD_SEARCHES, MANIFOLD_FALLBACK]) {
+    // The fallback is only worth paying for if the searches produced nothing.
+    if (url === MANIFOLD_FALLBACK && raw.size > 0) break;
+    try {
+      const list = await httpGetJson(url, { retries: 1, timeoutMs: 30000 });
+      if (!Array.isArray(list)) {
+        failures.push(`${url}: response was not an array`);
+        continue;
+      }
+      endpoints.push(url);
+      for (const m of list) if (m && typeof m.id === 'string') raw.set(m.id, m);
+    } catch (err) {
+      failures.push(`${url}: ${err.message}`);
+    }
+  }
+
+  if (raw.size === 0) {
+    return { ok: false, endpoint: null, scanned: 0, questions: [], error: failures.join('; ') || 'no markets returned' };
+  }
+
+  try {
+    const results = [...raw.values()];
     const questions = results
       .map((m) => {
         if (m.outcomeType !== 'BINARY' || m.isResolved) return null;
@@ -111,8 +143,7 @@ async function fetchManifold() {
         const close = Number.isFinite(m.closeTime) ? new Date(m.closeTime).toISOString().slice(0, 10) : null;
         const crowd = manifoldCrowd(m);
         if (!admissible({ close, crowd })) return null;
-        // A market nobody is trading is not a crowd.
-        if ((m.uniqueBettorCount ?? 0) < 15) return null;
+        if ((m.uniqueBettorCount ?? 0) < MIN_TRADERS) return null;
 
         return {
           platform: 'manifold',
@@ -121,15 +152,18 @@ async function fetchManifold() {
           url: m.url ?? `https://manifold.markets/market/${m.id}`,
           community_probability: Number(crowd.toFixed(4)),
           forecaster_count: m.uniqueBettorCount ?? null,
+          volume: typeof m.volume === 'number' ? Math.round(m.volume) : null,
           scheduled_close: close,
           horizon_days: daysBetween(batch, close),
           resolver: { type: 'manifold', market_id: m.id },
         };
       })
-      .filter(Boolean);
-    return { ok: true, endpoint: MANIFOLD_URL, scanned: results.length, questions };
+      .filter(Boolean)
+      // Deepest crowds first, so the reference point is as strong as available.
+      .sort((a, b) => (b.forecaster_count ?? 0) - (a.forecaster_count ?? 0));
+    return { ok: true, endpoint: endpoints.join(' + '), scanned: results.length, questions };
   } catch (err) {
-    return { ok: false, endpoint: MANIFOLD_URL, scanned: 0, questions: [], error: err.message };
+    return { ok: false, endpoint: endpoints.join(' + ') || null, scanned: raw.size, questions: [], error: err.message };
   }
 }
 
@@ -145,17 +179,26 @@ if (all.length === 0) {
   );
 }
 
-// Interleave the platforms so a slate is never accidentally single-source, then
-// order by horizon so short-dated questions are easy to find.
-const byPlatform = { metaculus: [], manifold: [] };
-for (const q of all) byPlatform[q.platform].push(q);
-for (const list of Object.values(byPlatform)) list.sort((a, b) => a.horizon_days - b.horizon_days);
+// Take the deepest crowds first, but round-robin across platform and horizon
+// bucket so a slate is never accidentally all one source or all short-dated -
+// the batch quotas need long-horizon questions to draw from too.
+const buckets = new Map();
+for (const q of all) {
+  const bucket = config.horizon_buckets.find((b) => q.horizon_days <= b.max_days)?.id ?? 'long';
+  const key = `${q.platform}:${bucket}`;
+  if (!buckets.has(key)) buckets.set(key, []);
+  buckets.get(key).push(q);
+}
+for (const list of buckets.values()) list.sort((a, b) => (b.forecaster_count ?? 0) - (a.forecaster_count ?? 0));
 
 const picked = [];
-for (let i = 0; picked.length < want && (byPlatform.metaculus[i] || byPlatform.manifold[i]); i++) {
-  if (byPlatform.metaculus[i] && picked.length < want) picked.push(byPlatform.metaculus[i]);
-  if (byPlatform.manifold[i] && picked.length < want) picked.push(byPlatform.manifold[i]);
+const lists = [...buckets.values()];
+for (let i = 0; picked.length < want && lists.some((l) => l[i]); i++) {
+  for (const list of lists) {
+    if (list[i] && picked.length < want) picked.push(list[i]);
+  }
 }
+picked.sort((a, b) => a.horizon_days - b.horizon_days || a.platform.localeCompare(b.platform));
 
 const slate = {
   batch,
@@ -180,6 +223,6 @@ if (toStdout) {
     console.log(`  ${name.padEnd(10)} ${s.ok ? `${s.questions.length} usable of ${s.scanned} scanned` : `UNAVAILABLE — ${s.error}`}`);
   }
   for (const q of picked.slice(0, 40)) {
-    console.log(`  ${q.platform.padEnd(9)} ${String(q.question_id).padStart(8)}  crowd ${String(q.community_probability).padEnd(6)}  closes ${q.scheduled_close} (${q.horizon_days}d)  ${q.title.slice(0, 80)}`);
+    console.log(`  ${q.platform.padEnd(9)} ${String(q.question_id).padStart(8)}  crowd ${String(q.community_probability).padEnd(6)}  ${String(q.forecaster_count ?? '?').padStart(4)} forecasters  closes ${q.scheduled_close} (${q.horizon_days}d)  ${q.title.slice(0, 70)}`);
   }
 }

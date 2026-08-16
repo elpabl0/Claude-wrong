@@ -108,7 +108,7 @@ try {
     const per = Object.entries(slate.sources).map(([k, v]) => `${k}: ${v.ok ? `${v.usable}/${v.scanned}` : 'unavailable'}`).join(', ');
     console.log(`ok\n    ${slate.questions.length} candidates (${per})`);
     for (const q of slate.questions.slice(0, 5)) {
-      console.log(`      ${q.platform} ${q.question_id}  crowd ${q.community_probability}  closes ${q.scheduled_close}  ${q.title.slice(0, 65)}`);
+      console.log(`      ${q.platform} ${q.question_id}  crowd ${q.community_probability}  ${q.forecaster_count ?? '?'} forecasters  closes ${q.scheduled_close}  ${q.title.slice(0, 60)}`);
     }
   }
 } catch (err) {
