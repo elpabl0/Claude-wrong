@@ -1,184 +1,173 @@
-# Authoring protocol
+# Operating protocol
 
-These are the standing instructions for the scheduled instance that writes a
-batch. They are in the repository, not in the schedule, so that what a batch has
-to contain is decided once and in public rather than every Monday in private.
+Standing instructions for the scheduled runs. They live in the repository rather
+than in the schedule, so what each run must do is decided once, in public, rather
+than every morning in private.
 
-If you are that instance: follow this exactly. Where it constrains you, the
-constraint is the point.
+There are three kinds of run. **Question authoring** writes the week's claims.
+**Trading** submits orders for one seat. **Post-mortem** analyses a bad call.
+They are deliberately separate sessions — a seat that could see the house's
+reasoning, or an analyst that could see the trade it is judging, would make the
+record worth less.
 
-## 0. Orient
+Whatever the run, start here:
 
 ```bash
-node scripts/status.js          # what the protocol requires of this batch
+node scripts/status.js          # what the protocol requires right now
 node scripts/status.js --json   # the same, machine-readable
 ```
 
-`status.js` tells you the batch date, how many predictions are still needed in
-each category, which minimums are outstanding, which post-mortems are owed, and
-which sources have stopped responding. Read the `recent_questions` list before
-writing anything: a batch that quietly re-asks a question already on the books is
-padding the sample, not adding to it.
+---
 
-## 1. Fetch the crowd slate first
+## A. Authoring questions
+
+Runs weekly. Writes `questions/<date>-<slug>.json`, one file per claim.
+
+### 1. Fetch the crowd slate first
 
 ```bash
 node scripts/mirror-candidates.js --batch=<YYYY-MM-DD>
 ```
 
 Do this **before** writing any mirrored question. It writes
-`ledger/mirror-slates/<batch>.json` containing open binary questions from
-Metaculus and Manifold, with the community probability as fetched today. Every
-mirrored prediction must set `origin` to `crowd-mirror`, cite a `platform` and
-`question_id` from that file, reproduce its `community_probability` and the
-slate's `fetched_utc` exactly, and use that platform's resolver pointed at that
-same question. Validation rejects anything else, so do not type a crowd number
-from memory — you will only fail the build.
+`market-slates/<date>.json` with open binary questions from Metaculus and
+Manifold and the community probability as fetched today. A mirrored question must
+set `origin: "mirrored"`, cite a `platform` and `question_id` from that file,
+reproduce its `community_probability` and the slate's `fetched_utc` exactly, and
+use that platform's resolver pointed at that same question. Validation rejects
+anything else, so never type a crowd number from memory.
 
-If the slate reports one platform as unavailable, that is expected rather than
+If the slate reports one platform unavailable, that is expected rather than
 broken: Metaculus refuses anonymous datacenter traffic unless `METACULUS_TOKEN`
-is configured. Take the mirrored questions from whichever platform answered.
+is set. Take the mirrored questions from whichever platform answered.
 
-A mirrored record's `external_reference` looks like this, copied from the slate:
+Choose what to mirror on interest, not on where you happen to agree with the
+crowd. Mirroring only the questions you would have answered the same way destroys
+the entire point of having an outside reference.
 
-```json
-"origin": "crowd-mirror",
-"resolver": { "type": "manifold", "market_id": "aBcD1234xy" },
-"external_reference": {
-  "platform": "manifold",
-  "question_id": "aBcD1234xy",
-  "community_probability": 0.44,
-  "snapshot_utc": "<the slate's fetched_utc, exactly>",
-  "url": "https://manifold.markets/market/aBcD1234xy"
-}
+### 2. Build the schedule, then the question
+
+```bash
+node scripts/new-question.js --resolution-date=YYYY-MM-DD --slug=some-claim
 ```
 
-Choose the questions you mirror on interest, not on where you happen to agree
-with the crowd. Mirroring only the ones you would have answered the same way
-destroys the entire point of having an outside reference.
-
-## 2. Write the batch
-
-Ten predictions, one JSON file each, at
-`ledger/predictions/<batch>-<slug>.json`. The slug is lowercase, hyphenated, and
-describes the question rather than the answer.
-
-```json
-{
-  "id": "2026-08-24-eu-ai-act-gpai-guidance",
-  "batch": "2026-08-24",
-  "created_utc": "2026-08-24T09:14:03Z",
-  "model": "<the exact model string you are running as>",
-  "protocol_version": 1,
-  "category": "geopolitics",
-  "claim_type": "change",
-  "origin": "self",
-  "question": "Will …?",
-  "probability": 0.35,
-  "resolution_date": "2026-11-24",
-  "resolution_criterion": "Plain-English statement of exactly what counts as YES, naming the source.",
-  "resolver": { "type": "json", "url": "https://…", "pointer": "/…", "op": ">=", "value": 100 },
-  "reasoning": "What you actually think and why, in the present tense.",
-  "evidence_that_would_move_me": ["…", "…"],
-  "external_reference": null
-}
-```
+This prints a skeleton with the round schedule already computed. **Do not write
+round dates by hand.** The schedule is fixed at creation and never edited, because
+a schedule that can be adjusted later is a schedule that can be adjusted once the
+news is in.
 
 Every batch must satisfy, exactly:
 
 | Requirement | Value |
 |---|---|
-| Predictions per batch | exactly 10 |
-| Per-category quota | exactly as set in `config/ledger.json` |
-| Continuity claims | at least 3 |
-| Mirrored from a crowd platform | at least 3 |
-| Horizon ≤ 30 days | at least 2 |
-| Horizon 121–400 days | at least 2 |
-| Probabilities outside 10–90% | at most 3 |
-| Any probability | strictly inside [0.02, 0.98] |
+| Questions per batch | exactly 6 |
+| Per-category quota | exactly as set in `config/market.json` |
+| Mirrored from a crowd platform | at least 2 |
+| Long horizon (61–400 days) | at least 1 |
 
-Run `node scripts/validate.js` until it passes. It enforces all of the above.
+Run `node scripts/validate.js` until it passes.
 
-## 3. Rules that matter more than the quotas
+### 3. The rule that matters more than the quotas
 
-**The resolver is the prediction.** Write the resolver before you write the
-probability. If you cannot express the criterion as a source, a field and a
-threshold that a script can check with no judgement, the question is not
-admissible — rewrite it until it is, or replace it. "Meaningful progress toward"
-is not a criterion. "The `stargazers_count` field of this API response is at
-least 40000 on 2026-11-24" is.
+**The resolver is the question.** Write the resolver before you write the claim.
+If you cannot express the criterion as a source, a field and a threshold that a
+script can check with no judgement, the question is not admissible — rewrite it
+until it is, or replace it. "Meaningful progress toward" is not a criterion. "The
+`stargazers_count` field of this API response is at least 40000 on 2026-11-24"
+is.
 
-**Check the criterion is not already satisfied.** A question whose answer is
-already YES on the day it is written scores nothing and inflates the record. For
-`http_text` this is a required field; for everything else, check it yourself by
-running the resolver:
+Check the criterion is not already satisfied on the day you write it. A question
+whose answer is already YES scores nothing and inflates the record:
 
 ```bash
-node scripts/resolve.js --dry-run --id=<id> --today=<resolution_date>
+node scripts/resolve.js --dry-run --id=<question-id> --today=<resolution-date>
 ```
 
-**Continuity claims are not filler.** They are the control arm for H2, and the
-temptation will be to write three trivially-true ones at 97% and move on. Do not.
-A continuity claim should name something that a reasonable person might expect to
-change in the window and assert that it will not. If you would not be at all
-surprised to be wrong, the probability should not be 0.95.
+---
 
-**State the probability you believe, then leave it.** Do not round toward 50% to
-look humble, and do not round away from it to look decisive. The whole artefact
-is worthless if the numbers are chosen for how they will read.
+## B. Trading a seat
 
-**Reasoning is a trace, not an argument.** Say what you actually think, including
-the part you are unsure about. It will be compared against a post-mortem written
-by an instance that cannot see it.
+Runs when a round is open. **One session per seat**, and a session trades exactly
+one seat.
 
-## 4. Post-mortems
+```bash
+node scripts/status.js --seat=<your-seat>     # open rounds, your bankroll
+```
+
+`status.js` will not tell you what anyone else has submitted, because nothing
+can: during a window the book is sealed. You are pricing the claim, not the
+other players.
+
+Submit a JSON array on stdin:
+
+```bash
+echo '[{"question_id":"…","round_id":"r2","side":"yes","limit_price":0.62,"size":40,
+        "rationale":"why, in one or two sentences"}]' \
+  | node scripts/submit-order.js --seat=<your-seat>
+```
+
+- `side` is `yes` or `no`. Buying NO at 0.30 is the same order as selling YES at
+  0.70; one book covers both.
+- `limit_price` is **the probability you actually believe**, in that side's own
+  space. You are scored on it with a proper scoring rule, so stating your real
+  number is the optimal play, not a courtesy. Do not shade it toward 50% to look
+  humble or away from it to look decisive.
+- `size` is whole contracts. A fill costs `size × price` points and pays `size`
+  if you are right.
+- The rationale is committed with the order and published when the round closes.
+  Write what you actually think, including the part you are unsure about.
+
+**Not every round deserves an order.** The bankroll is finite and the single-order
+cap is 25% of your grant, so choosing which disagreements are worth capital is
+itself part of what is being measured. Skipping a question you have no edge on is
+a legitimate and recorded move. Trading everything at maximum size is not
+participation, it is noise.
+
+Never try to read `rounds/*/reveals.jsonl` for a round that has not closed. In a
+sealed market you cannot; in an open-book market you could, and doing so would
+make your own score meaningless.
+
+---
+
+## C. Post-mortems
+
+Runs when a seat scored worse than the configured threshold on a settled
+question. **Must be a different session from the one that placed the trade**, and
+it works only from the brief:
 
 ```bash
 node scripts/postmortem-brief.js            # what is owed
-node scripts/postmortem-brief.js <id>       # the brief for one
+node scripts/postmortem-brief.js <question-id> --seat=<seat>
 ```
 
-Anything that scored worse than 0.25 gets one. **A post-mortem must be written by
-a different session from the one that made the forecast**, working only from the
-brief — which deliberately omits the original reasoning. If you are the authoring
-instance and you can see the reasoning of the prediction you are about to analyse,
-you are the wrong instance for that job; leave it for the post-mortem run.
+The brief carries the claim, the position, the outcome and the machine evidence,
+and deliberately omits the rationale that was written at the time. Do not go and
+read it. The whole point is that the account of a bad call is not authored by the
+thing motivated to defend it, and a reconstruction that differs from what was
+actually written is itself a finding.
 
-Write to `ledger/postmortems/<id>.md`.
+Write `postmortems/<question-id>.md`, 200–400 words: what a well-informed
+forecaster knew on the day, the specific failure mode, what the number should
+have been, and whether it is a one-off or a pattern. Do not soften the verdict.
 
-## 5. Commit
+---
 
-One commit per batch, and nothing else in it.
+## Things no run may ever do
 
-```
-predictions: batch <YYYY-MM-DD>
-
-10 predictions, protocol v1, model <exact model string>.
-Categories: …
-Mirrored: <n> from slate <fetched_utc>.
-```
-
-The model string in the commit message must match the `model` field in every
-record. If the model has changed since the last batch, say so in the message: the
-analysis segments on it, and a silent change is the single most damaging thing
-that can happen to this series.
-
-Then push. CI runs `validate`, `verify-integrity` and the unit tests, and
-publishes the site. If `verify-integrity` fails, **do not amend or force-push** —
-the failure is the artefact working as designed. Add a new file that says what
-went wrong.
-
-## 6. Things you must never do
-
-- Edit or delete a prediction or resolution file after it is committed. If a
-  question turns out to be ambiguous, let it resolve or void as written and say
-  so in a post-mortem. The ledger records what was actually predicted, including
-  the badly-written ones.
-- Write a prediction whose resolution date has already passed.
-- Type a community probability that did not come out of a committed slate, or
-  mirror one question and resolve against another.
-- Resolve a prediction by hand. Resolution is `scripts/resolve.js` and nothing
-  else. If a resolver is broken, the prediction voids and the void rate rises.
-  That is the honest outcome.
-- Change `config/ledger.json` in the same commit as a batch. Amendments are
-  separate, reasoned commits, and they never apply retroactively.
+- **Edit or delete a committed record.** Questions, order logs, published books,
+  resolutions and seats are append-only, and `scripts/verify-integrity.js` fails
+  the build if any of them changes. A `.jsonl` order log may gain lines; it may
+  never have a line rewritten.
+- **Resolve anything by hand.** Resolution is `scripts/resolve.js` and nothing
+  else. If a resolver breaks, the question voids and the void rate rises. That is
+  the honest outcome.
+- **Type a crowd probability that did not come from a committed slate**, or
+  mirror one market while resolving against another.
+- **Write a question whose resolution date has passed**, or whose rounds close on
+  or after it.
+- **Change `config/market.json` in the same commit as anything else.** Amendments
+  are separate, reasoned commits, and they never apply retroactively — scoring
+  segments on `protocol_version` so an amendment splits the series instead of
+  quietly rewriting it.
+- **Force-push, amend, or rebase away a failing integrity check.** The failure is
+  the artefact working as designed. Add a new file saying what went wrong.

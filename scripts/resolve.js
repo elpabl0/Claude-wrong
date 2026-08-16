@@ -1,208 +1,172 @@
 #!/usr/bin/env node
 /**
- * Resolve every prediction that has come due, mechanically.
+ * Resolve every question that has come due, mechanically.
  *
- * This script contains no judgement. It reads the resolver configuration that
- * was committed with the prediction - a named source and a threshold, both fixed
- * before the outcome was known - executes it, and writes the answer down.
- * Nothing here can decide that a question was "really" about something else.
+ * There is no judgement in this script. It reads the resolver that was committed
+ * with the question - a named source, a field and a threshold, all fixed before
+ * the answer was known - executes it, and writes down what it said. Nothing here
+ * can decide that a question was "really" about something else.
  *
  *   node scripts/resolve.js              resolve everything due
- *   node scripts/resolve.js --probe      check that open predictions' sources still respond
- *   node scripts/resolve.js --dry-run    report what would happen, write nothing
- *   node scripts/resolve.js --id=<id>    operate on a single prediction
+ *   node scripts/resolve.js --probe      check open questions' sources still respond
+ *   node scripts/resolve.js --dry-run    report, write nothing
+ *   node scripts/resolve.js --id=<question-id>
  */
 import { appendFileSync, mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { paths, loadConfig, todayUTC, daysBetween } from '../lib/config.js';
-import { loadLedger } from '../lib/ledger.js';
-import { getResolver, SourceError, CriterionError } from '../lib/resolvers/index.js';
-import { brier } from '../lib/scoring.js';
+import { loadMarket } from '../lib/market.js';
+import { getResolver, CriterionError } from '../lib/resolvers/index.js';
 
-const argv = process.argv.slice(2);
-const flag = (name) => argv.includes(`--${name}`);
-const opt = (name) => argv.find((a) => a.startsWith(`--${name}=`))?.split('=').slice(1).join('=') ?? null;
-
-const DRY = flag('dry-run');
-const PROBE = flag('probe');
-const ONLY = opt('id');
-const CONCURRENCY = Number(opt('concurrency') ?? 4);
+const arg = (n, d = null) => process.argv.find((a) => a.startsWith(`--${n}=`))?.split('=').slice(1).join('=') ?? d;
+const DRY = process.argv.includes('--dry-run');
+const PROBE = process.argv.includes('--probe');
+const ONLY = arg('id');
+const CONCURRENCY = Number(arg('concurrency', '4'));
 
 const config = loadConfig();
-const today = opt('today') ?? todayUTC();
-const attemptsDir = join(paths.root, 'ledger', 'attempts');
+const today = arg('today', todayUTC());
+const market = loadMarket({ config, today });
 
-/** Run tasks with a small concurrency cap - these are other people's servers. */
 async function pool(items, limit, fn) {
-  const results = new Array(items.length);
+  const out = new Array(items.length);
   let next = 0;
-  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
-    while (true) {
-      const i = next++;
-      if (i >= items.length) return;
-      results[i] = await fn(items[i], i);
-    }
-  });
-  await Promise.all(workers);
-  return results;
+  await Promise.all(
+    Array.from({ length: Math.min(limit, items.length) }, async () => {
+      while (true) {
+        const i = next++;
+        if (i >= items.length) return;
+        out[i] = await fn(items[i]);
+      }
+    }),
+  );
+  return out;
 }
 
 function logAttempt(id, entry) {
   if (DRY) return;
-  mkdirSync(attemptsDir, { recursive: true });
-  appendFileSync(join(attemptsDir, `${id}.jsonl`), JSON.stringify(entry) + '\n');
+  mkdirSync(paths.attempts, { recursive: true });
+  appendFileSync(join(paths.attempts, `${id}.jsonl`), JSON.stringify(entry) + '\n');
 }
 
 function readAttempts(id) {
-  const f = join(attemptsDir, `${id}.jsonl`);
+  const f = join(paths.attempts, `${id}.jsonl`);
   if (!existsSync(f)) return [];
-  return readFileSync(f, 'utf8')
-    .split('\n')
-    .filter(Boolean)
-    .map((line) => {
-      try {
-        return JSON.parse(line);
-      } catch {
-        return { utc: null, outcome: 'unparseable', detail: line.slice(0, 200) };
-      }
-    });
+  return readFileSync(f, 'utf8').split('\n').filter(Boolean).map((l) => {
+    try {
+      return JSON.parse(l);
+    } catch {
+      return { utc: null, outcome: 'unparseable', detail: l.slice(0, 200) };
+    }
+  });
 }
 
-function writeResolution(record) {
-  const file = join(paths.resolutions, `${record.id}.json`);
-  if (DRY) {
-    console.log(`  would write ${file}`);
-    return;
-  }
-  mkdirSync(paths.resolutions, { recursive: true });
-  writeFileSync(file, JSON.stringify(record, null, 2) + '\n');
-}
-
-function finalise(entry, { status, observed, detail, voidReason = null }) {
-  const p = entry.prediction;
+function finalise(q, { status, observed, detail, voidReason = null }) {
   const nowISO = new Date().toISOString();
-  logAttempt(p.id, { utc: nowISO, outcome: status, detail });
+  logAttempt(q.id, { utc: nowISO, outcome: status, detail });
   const record = {
-    id: p.id,
+    question_id: q.id,
     resolved_utc: nowISO,
     status,
     observed: observed ?? null,
     detail,
-    resolver_type: p.resolver.type,
-    model_at_prediction: p.model,
-    probability: p.probability,
-    brier: status === 'void' ? null : brier(p.probability, status === 'yes' ? 1 : 0),
-    attempts: readAttempts(p.id),
+    resolver_type: q.resolver.type,
+    protocol_version: q.protocol_version,
+    attempts: readAttempts(q.id),
   };
   if (status === 'void') record.void_reason = voidReason ?? detail;
-  writeResolution(record);
+  if (DRY) {
+    console.log(`  would write resolutions/${q.id}.json → ${status.toUpperCase()}`);
+  } else {
+    mkdirSync(paths.resolutions, { recursive: true });
+    writeFileSync(join(paths.resolutions, `${q.id}.json`), JSON.stringify(record, null, 2) + '\n');
+  }
   return record;
 }
 
-// ------------------------------------------------------------------ resolving
 async function resolveOne(entry) {
-  const p = entry.prediction;
-  const impl = getResolver(p.resolver.type);
+  const q = entry.question;
+  const impl = getResolver(q.resolver.type);
   if (!impl) {
-    return finalise(entry, {
-      status: 'void',
-      observed: null,
-      detail: `no implementation for resolver type \`${p.resolver.type}\``,
-      voidReason: 'resolver type is no longer implemented',
-    });
+    return finalise(q, { status: 'void', observed: null, detail: `no implementation for resolver type \`${q.resolver.type}\``, voidReason: 'resolver type is no longer implemented' });
   }
 
-  const daysLate = daysBetween(p.resolution_date, today);
+  const daysLate = daysBetween(q.resolution_date, today);
   const graceExpired = daysLate > config.resolution.grace_period_days;
 
   let result;
   try {
-    result = await impl.resolve(p.resolver, { env: process.env });
+    result = await impl.resolve(q.resolver, { env: process.env });
   } catch (err) {
     const detail = `${err.name}: ${err.message}`;
-    logAttempt(p.id, { utc: new Date().toISOString(), outcome: 'error', detail });
+    logAttempt(q.id, { utc: new Date().toISOString(), outcome: 'error', detail });
     if (err instanceof CriterionError || graceExpired) {
-      return finalise(entry, {
+      return finalise(q, {
         status: 'void',
         observed: null,
         detail,
         voidReason:
           err instanceof CriterionError
             ? `the criterion itself was unusable: ${err.message}`
-            : `the source could not be read for ${daysLate} days after the resolution date (grace period ${config.resolution.grace_period_days} days): ${err.message}`,
+            : `the source could not be read for ${daysLate} days after the resolution date (grace period ${config.resolution.grace_period_days}): ${err.message}`,
       });
     }
-    console.log(`  ${p.id}: source unreadable, ${config.resolution.grace_period_days - daysLate} day(s) of grace left — ${err.message}`);
+    console.log(`  ${q.id}: source unreadable, ${config.resolution.grace_period_days - daysLate} day(s) of grace left — ${err.message}`);
     return null;
   }
 
   if (result.status === 'pending') {
-    logAttempt(p.id, { utc: new Date().toISOString(), outcome: 'pending', detail: result.detail });
+    logAttempt(q.id, { utc: new Date().toISOString(), outcome: 'pending', detail: result.detail });
     if (graceExpired) {
-      return finalise(entry, {
-        status: 'void',
-        observed: result.observed ?? null,
-        detail: result.detail,
-        voidReason: `the source had still not resolved ${daysLate} days after the resolution date`,
-      });
+      return finalise(q, { status: 'void', observed: result.observed ?? null, detail: result.detail, voidReason: `the source had still not resolved ${daysLate} days after the resolution date` });
     }
-    console.log(`  ${p.id}: still pending, ${config.resolution.grace_period_days - daysLate} day(s) of grace left`);
+    console.log(`  ${q.id}: still pending, ${config.resolution.grace_period_days - daysLate} day(s) of grace left`);
     return null;
   }
 
-  return finalise(entry, result);
+  return finalise(q, result);
 }
 
-// -------------------------------------------------------------------- probing
 async function probeOne(entry) {
-  const p = entry.prediction;
-  const impl = getResolver(p.resolver.type);
-  const base = { id: p.id, type: p.resolver.type, resolution_date: p.resolution_date };
+  const q = entry.question;
+  const impl = getResolver(q.resolver.type);
+  const base = { question_id: q.id, type: q.resolver.type, resolution_date: q.resolution_date };
   if (!impl?.probe) return { ...base, ok: false, detail: 'resolver has no probe' };
   try {
-    return { ...base, ok: true, detail: await impl.probe(p.resolver, { env: process.env }) };
+    return { ...base, ok: true, detail: await impl.probe(q.resolver, { env: process.env }) };
   } catch (err) {
     return { ...base, ok: false, detail: `${err.name}: ${err.message}` };
   }
 }
 
-// ----------------------------------------------------------------------- main
-const ledger = loadLedger({ config, today });
-const select = (list) => (ONLY ? list.filter((e) => e.prediction.id === ONLY) : list);
+const select = (list) => (ONLY ? list.filter((e) => e.question.id === ONLY) : list);
 
 if (PROBE) {
-  const targets = select(ledger.open);
-  console.log(`Probing ${targets.length} open prediction source(s)…`);
+  const targets = select(market.open);
+  console.log(`Probing ${targets.length} open question source(s)…`);
   const results = await pool(targets, CONCURRENCY, probeOne);
   const failures = results.filter((r) => !r.ok);
-  const snapshot = {
-    checked_utc: new Date().toISOString(),
-    checked: results.length,
-    failing: failures.length,
-    results: results.sort((a, b) => Number(a.ok) - Number(b.ok) || a.resolution_date.localeCompare(b.resolution_date)),
-  };
   if (!DRY) {
-    mkdirSync(join(paths.root, 'ledger'), { recursive: true });
-    writeFileSync(join(paths.root, 'ledger', 'probe-status.json'), JSON.stringify(snapshot, null, 2) + '\n');
+    mkdirSync(paths.analysis, { recursive: true });
+    writeFileSync(
+      join(paths.analysis, 'source-health.json'),
+      JSON.stringify({ checked_utc: new Date().toISOString(), checked: results.length, failing: failures.length, results: results.sort((a, b) => Number(a.ok) - Number(b.ok)) }, null, 2) + '\n',
+    );
   }
-  for (const f of failures) console.warn(`  UNREACHABLE ${f.id} (${f.type}): ${f.detail}`);
+  for (const f of failures) console.warn(`  UNREACHABLE ${f.question_id} (${f.type}): ${f.detail}`);
   console.log(`${results.length - failures.length}/${results.length} sources reachable.`);
   // A failing probe is a warning, not a build failure: the source may simply be
-  // down today, and the grace period exists precisely for that.
+  // down today, which is exactly what the grace period is for.
   process.exit(0);
 }
 
-const due = select(ledger.overdue);
-if (due.length === 0) {
-  console.log(`Nothing due as of ${today}. ${ledger.open.length} open, ${ledger.scored.length} resolved, ${ledger.voided.length} void.`);
+const due = select(market.awaitingResolution);
+if (!due.length) {
+  console.log(`Nothing due as of ${today}. ${market.open.length} open, ${market.resolved.length} resolved, ${market.voided.length} void.`);
   process.exit(0);
 }
 
-console.log(`${due.length} prediction(s) due as of ${today}${DRY ? ' (dry run)' : ''}:`);
+console.log(`${due.length} question(s) due as of ${today}${DRY ? ' (dry run)' : ''}:`);
 const finals = (await pool(due, CONCURRENCY, resolveOne)).filter(Boolean);
-
-for (const r of finals) {
-  const mark = r.status === 'void' ? 'VOID' : r.status.toUpperCase();
-  console.log(`  ${r.id}: ${mark}${r.brier === null ? '' : ` (p=${r.probability}, Brier ${r.brier.toFixed(4)})`} — ${r.detail}`);
-}
+for (const r of finals) console.log(`  ${r.question_id}: ${r.status.toUpperCase()} — ${r.detail}`);
 console.log(`Resolved ${finals.length} of ${due.length} due; ${due.length - finals.length} still within the grace period.`);

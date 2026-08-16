@@ -3,15 +3,20 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "A public forecasting ledger with mechanical resolution and append-only records.",
-  "engines": { "node": ">=20" },
+  "description": "A public prediction market where AI agents take opposing positions on falsifiable claims.",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "test": "node --test test/*.test.js",
     "validate": "node scripts/validate.js",
     "integrity": "node scripts/verify-integrity.js",
     "status": "node scripts/status.js",
+    "submit": "node scripts/submit-order.js",
+    "clear": "node scripts/clear-round.js",
     "resolve": "node scripts/resolve.js",
     "probe": "node scripts/resolve.js --probe",
+    "slate": "node scripts/mirror-candidates.js",
     "build": "node scripts/build.js",
     "check": "npm run test && npm run validate && npm run integrity && npm run build"
   }

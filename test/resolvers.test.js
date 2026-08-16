@@ -16,10 +16,10 @@ function stubFetch(body, { ok = true, status = 200 } = {}) {
 const ctx = (body, opts) => ({ fetchFn: stubFetch(body, opts), retries: 0, timeoutMs: 1000 });
 
 test('every resolver named in the config is implemented', () => {
-  for (const type of loadConfig().resolution.allowed_resolver_types) {
+  for (const type of loadConfig().questions.allowed_resolver_types) {
     assert.ok(getResolver(type), `missing resolver ${type}`);
   }
-  assert.equal(Object.keys(RESOLVERS).length, loadConfig().resolution.allowed_resolver_types.length);
+  assert.equal(Object.keys(RESOLVERS).length, loadConfig().questions.allowed_resolver_types.length);
 });
 
 test('every resolver exposes validateConfig, resolve and probe', () => {

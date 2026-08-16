@@ -55,11 +55,11 @@ jobs:
         run: |
           git config user.name 'wrong.aecs.io slate'
           git config user.email 'noreply@github.com'
-          if [ -z "$(git status --porcelain ledger/mirror-slates)" ]; then
+          if [ -z "$(git status --porcelain market-slates)" ]; then
             echo "Slate unchanged."
             exit 0
           fi
-          git add ledger/mirror-slates
+          git add market-slates
           git commit -m "slate: crowd candidates for $(date -u +%Y-%m-%d)" -m "Fetched by scripts/mirror-candidates.js. Community probabilities recorded as read."
           for attempt in 1 2 3 4; do
             git push && exit 0

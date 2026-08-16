@@ -1,93 +1,112 @@
 #!/usr/bin/env node
 /**
- * The briefing the scheduled authoring instance reads before writing a batch.
- * It states what the protocol requires, what is already on the books, and what
- * still needs a post-mortem - so that none of that is decided in the moment.
+ * The briefing every scheduled run reads before it does anything.
+ *
+ * It states what the protocol requires, what is already on the books, which
+ * rounds are open right now, what each seat can afford, and what is owed. All of
+ * that is decided by the committed rules rather than in the moment.
  *
  *   node scripts/status.js            human-readable
  *   node scripts/status.js --json     machine-readable
+ *   node scripts/status.js --seat=house   what one seat can do right now
  */
-import { loadConfig, todayUTC } from '../lib/config.js';
-import { loadLedger } from '../lib/ledger.js';
-import { fullReport } from '../lib/scoring.js';
-import { readFileSync, existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { paths } from '../lib/config.js';
+import { paths, loadConfig, todayUTC, addDays } from '../lib/config.js';
+import { loadMarket } from '../lib/market.js';
+import { leaderboard, errorCorrelationMatrix, crowdComparison, updateSpeed } from '../lib/scoring.js';
 
+const arg = (n, d = null) => process.argv.find((a) => a.startsWith(`--${n}=`))?.split('=').slice(1).join('=') ?? d;
 const asJson = process.argv.includes('--json');
-const config = loadConfig();
-const today = process.argv.find((a) => a.startsWith('--today='))?.split('=')[1] ?? todayUTC();
-const ledger = loadLedger({ config, today });
-const report = fullReport(ledger);
+const onlySeat = arg('seat');
 
-/** Next Monday (or today, if today is Monday) in UTC. */
+const config = loadConfig();
+const today = arg('today', todayUTC());
+const now = arg('now', new Date().toISOString());
+const market = loadMarket({ config, today, now });
+
+/** Next batch day (Monday by default), or today if today is that day. */
 function nextBatchDate(from = today) {
+  const target = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'].indexOf(config.questions.batch_day_utc.toLowerCase());
   const d = new Date(`${from}T00:00:00Z`);
-  const target = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
-    .indexOf(config.cadence.batch_day_utc.toLowerCase());
-  const delta = (target - d.getUTCDay() + 7) % 7;
-  d.setUTCDate(d.getUTCDate() + delta);
-  return d.toISOString().slice(0, 10);
+  return addDays(from, (target - d.getUTCDay() + 7) % 7);
 }
 
 const batchDate = nextBatchDate();
-const alreadyWritten = ledger.entries.filter((e) => e.prediction.batch === batchDate);
+const written = market.questions.filter((q) => q.question.created_utc.slice(0, 10) === batchDate);
 
 const requirements = {
   batch_date: batchDate,
-  batch_size: config.cadence.batch_size,
-  already_written: alreadyWritten.length,
-  still_needed: Math.max(0, config.cadence.batch_size - alreadyWritten.length),
+  per_batch: config.questions.per_batch,
+  already_written: written.length,
+  still_needed: Math.max(0, config.questions.per_batch - written.length),
   categories: Object.fromEntries(
-    Object.entries(config.categories).map(([k, v]) => [
-      k,
-      {
-        quota: v.quota_per_batch,
-        written: alreadyWritten.filter((e) => e.prediction.category === k).length,
-        remaining: Math.max(0, v.quota_per_batch - alreadyWritten.filter((e) => e.prediction.category === k).length),
-      },
-    ]),
+    Object.entries(config.questions.categories).map(([k, v]) => {
+      const n = written.filter((q) => q.question.category === k).length;
+      return [k, { quota: v.quota_per_batch, written: n, remaining: Math.max(0, v.quota_per_batch - n) }];
+    }),
   ),
-  minimums: {
-    continuity: config.quotas.min_continuity_claims_per_batch,
-    mirrored: config.quotas.min_mirrored_per_batch,
-    short_horizon: config.quotas.min_short_horizon_per_batch,
-    long_horizon: config.quotas.min_long_horizon_per_batch,
-  },
-  probability_bounds: config.quotas.forbid_probability_extremes,
+  min_mirrored: config.questions.min_mirrored_per_batch,
+  mirrored_written: written.filter((q) => q.question.origin === 'mirrored').length,
+  min_long_horizon: config.questions.min_long_horizon_per_batch,
 };
 
-// Questions already asked, so a batch does not quietly re-ask an easy one.
-const recentQuestions = ledger.entries
-  .slice(0, 60)
-  .map((e) => ({ id: e.prediction.id, batch: e.prediction.batch, category: e.prediction.category, question: e.prediction.question }));
+const openRounds = market.openRounds.map(({ question, round }) => {
+  const entry = market.questions.find((q) => q.question.id === question.id);
+  return {
+    question_id: question.id,
+    claim: question.claim,
+    category: question.category,
+    round_id: round.id,
+    t_minus_days: round.t_minus_days,
+    closes_utc: round.closes_utc,
+    current_price: entry.currentPrice,
+    price_path: entry.pricePath.map((p) => ({ round_id: p.round_id, price: p.price, cleared: p.cleared })),
+    orders_committed: round.commitment_count,
+    resolution_criterion: question.resolution_criterion,
+    resolution_date: question.resolution_date,
+    // Deliberately absent: anything about who has submitted what. A seat reading
+    // this before submitting must learn nothing about the current book.
+  };
+});
 
-const postmortemsNeeded = ledger.scored
-  .filter((e) => e.brier !== null && e.brier > config.postmortem.trigger_brier_above && !e.postmortem)
-  .map((e) => ({ id: e.prediction.id, brier: e.brier, probability: e.prediction.probability, outcome: e.outcome, question: e.prediction.question }));
+const board = leaderboard(market.positionsBySeat, market.seats, config);
+const postmortemsOwed = market.questions
+  .filter((q) => q.settlement)
+  .flatMap((q) =>
+    q.settlement.seats
+      .filter((s) => s.log_score < config.postmortem.trigger_log_score_below && !q.postmortem)
+      .map((s) => ({ question_id: q.question.id, seat: s.seat, log_score: s.log_score, claim: q.question.claim })),
+  );
 
-const probeFile = join(paths.root, 'ledger', 'probe-status.json');
-const probe = existsSync(probeFile) ? JSON.parse(readFileSync(probeFile, 'utf8')) : null;
-const failingSources = (probe?.results ?? []).filter((r) => !r.ok);
+const healthFile = join(paths.analysis, 'source-health.json');
+const health = existsSync(healthFile) ? JSON.parse(readFileSync(healthFile, 'utf8')) : null;
 
 const payload = {
   today,
+  now,
   protocol_version: config.protocol_version,
-  counts: report.counts,
-  requirements,
-  recent_questions: recentQuestions,
-  postmortems_needed: postmortemsNeeded,
-  overdue_within_grace: ledger.overdue.map((e) => ({ id: e.prediction.id, resolution_date: e.prediction.resolution_date })),
-  failing_sources: failingSources,
-  headline: {
-    mean_brier: report.overall.meanBrier,
-    n_resolved: report.overall.n,
-    skill_vs_base_rate: report.overall.skillVsBaseRate,
-    expected_calibration_error: report.expected_calibration_error,
+  phase: config.phase.current,
+  counts: {
+    questions: market.questions.length,
+    open: market.open.length,
+    awaiting_resolution: market.awaitingResolution.length,
+    resolved: market.resolved.length,
+    void: market.voided.length,
+    void_rate: market.questions.length ? market.voided.length / market.questions.length : 0,
+    seats: market.seats.size,
+    cleared_rounds: market.questions.reduce((a, q) => a + q.clearings.filter((c) => c.cleared).length, 0),
   },
-  hypotheses: Object.fromEntries(
-    Object.entries(report.hypotheses).map(([k, v]) => [k, { claim: v.claim, n: v.n, estimate: v.mean, ci: [v.lo, v.hi], verdict: v.verdict }]),
-  ),
+  requirements,
+  open_rounds: onlySeat ? openRounds : openRounds,
+  rounds_awaiting_clear: market.roundsAwaitingClear.map(({ question, round }) => ({ question_id: question.id, round_id: round.id, closed_utc: round.closes_utc })),
+  bankrolls: [...market.bankrolls.values()].filter((b) => !onlySeat || b.seat === onlySeat),
+  leaderboard: board,
+  postmortems_owed: postmortemsOwed,
+  failing_sources: (health?.results ?? []).filter((r) => !r.ok),
+  cross_model_error_correlation: errorCorrelationMatrix(market.positionsBySeat),
+  crowd_comparison: crowdComparison(market.positionsBySeat, market.questionsById),
+  update_speed: updateSpeed(market.positionsBySeat),
 };
 
 if (asJson) {
@@ -96,39 +115,56 @@ if (asJson) {
 }
 
 const pct = (x) => (x === null || x === undefined ? '—' : `${(x * 100).toFixed(1)}%`);
-const num = (x, d = 4) => (x === null || x === undefined ? '—' : x.toFixed(d));
+const num = (x, d = 3) => (x === null || x === undefined ? '—' : x.toFixed(d));
 
-console.log(`wrong.aecs.io — status for ${today} (protocol v${config.protocol_version})\n`);
-console.log(`Ledger: ${report.counts.total} predictions · ${report.counts.open} open · ${report.counts.resolved} resolved · ${report.counts.void} void (${pct(report.counts.void_rate)})`);
-console.log(`Score:  mean Brier ${num(report.overall.meanBrier)} over ${report.overall.n} resolved · ECE ${num(report.expected_calibration_error, 3)} · skill vs base rate ${num(report.overall.skillVsBaseRate, 3)}\n`);
+console.log(`wrong.aecs.io — status for ${today} (protocol v${config.protocol_version}, phase ${config.phase.current})\n`);
+console.log(`Market: ${payload.counts.questions} questions · ${payload.counts.open} open · ${payload.counts.resolved} resolved · ${payload.counts.void} void (${pct(payload.counts.void_rate)})`);
+console.log(`        ${payload.counts.seats} seats · ${payload.counts.cleared_rounds} rounds cleared\n`);
 
-console.log(`Next batch: ${batchDate} — ${requirements.still_needed} of ${config.cadence.batch_size} still to write`);
+if (openRounds.length) {
+  console.log(`Rounds open now (${openRounds.length}) — submit with: node scripts/submit-order.js --seat=<id> < orders.json`);
+  for (const r of openRounds) {
+    console.log(`  ${r.question_id} ${r.round_id}  closes ${r.closes_utc}  price ${num(r.current_price, 2)}  ${r.orders_committed} order(s) committed`);
+    console.log(`      ${r.claim.slice(0, 100)}`);
+  }
+  console.log('');
+} else {
+  console.log('No round is open right now.\n');
+}
+
+if (market.roundsAwaitingClear.length) {
+  console.log(`Rounds past their close and awaiting a clear (${market.roundsAwaitingClear.length}): run node scripts/clear-round.js\n`);
+}
+
+console.log(`Next batch: ${batchDate} — ${requirements.still_needed} of ${config.questions.per_batch} still to write`);
 for (const [cat, r] of Object.entries(requirements.categories)) {
   console.log(`  ${cat.padEnd(20)} ${r.written}/${r.quota}${r.remaining ? `  (${r.remaining} needed)` : '  ✓'}`);
 }
-console.log(`  minimums: ≥${requirements.minimums.continuity} continuity, ≥${requirements.minimums.mirrored} mirrored, ≥${requirements.minimums.short_horizon} short-horizon, ≥${requirements.minimums.long_horizon} long-horizon`);
-console.log(`  probabilities must sit inside [${requirements.probability_bounds.min}, ${requirements.probability_bounds.max}]\n`);
+console.log(`  mirrored: ${requirements.mirrored_written}/${requirements.min_mirrored} minimum · long-horizon minimum ${requirements.min_long_horizon}\n`);
 
-if (ledger.overdue.length) {
-  console.log(`Overdue but still inside the grace period (${ledger.overdue.length}):`);
-  for (const e of ledger.overdue) console.log(`  ${e.prediction.id} (due ${e.prediction.resolution_date})`);
+console.log('Bankrolls:');
+for (const b of payload.bankrolls) {
+  console.log(`  ${b.seat.padEnd(14)} available ${String(b.available).padStart(9)}  granted ${b.granted}  at risk ${b.at_risk}  realised ${b.realised_pnl >= 0 ? '+' : ''}${b.realised_pnl}`);
+}
+console.log('');
+
+if (board.some((s) => s.questions_settled > 0)) {
+  console.log('Leaderboard (ranked on log score — win rate rewards picking the obvious):');
+  for (const s of board) {
+    console.log(`  ${s.seat.padEnd(14)} log ${String(num(s.log_score, 2)).padStart(8)}  points ${String(s.points_pnl).padStart(8)}  Brier ${num(s.brier)}  ${s.wins}W-${s.losses}L over ${s.questions_settled} settled  [${s.division}, ${s.model_string}]`);
+  }
+  console.log('');
+} else {
+  console.log('Nothing has settled yet, so there is no leaderboard worth printing.\n');
+}
+
+if (postmortemsOwed.length) {
+  console.log(`Post-mortems owed (${postmortemsOwed.length}):`);
+  for (const p of postmortemsOwed) console.log(`  ${p.question_id} / ${p.seat}  log score ${num(p.log_score, 2)}`);
   console.log('');
 }
 
-if (postmortemsNeeded.length) {
-  console.log(`Post-mortems owed (Brier > ${config.postmortem.trigger_brier_above}) — ${postmortemsNeeded.length}:`);
-  for (const p of postmortemsNeeded) console.log(`  ${p.id}  p=${p.probability} outcome=${p.outcome} Brier=${num(p.brier)}`);
-  console.log('');
-}
-
-if (failingSources.length) {
-  console.log(`Sources not responding as of the last probe (${probe.checked_utc}):`);
-  for (const f of failingSources) console.log(`  ${f.id} (${f.type}): ${f.detail}`);
-  console.log('');
-}
-
-console.log('Pre-registered hypotheses:');
-for (const [k, h] of Object.entries(report.hypotheses)) {
-  console.log(`  ${k} [${h.verdict.status}] n=${h.n} estimate=${num(h.mean, 3)} 95% CI [${num(h.lo, 3)}, ${num(h.hi, 3)}]`);
-  console.log(`      ${h.claim}`);
+if (payload.failing_sources.length) {
+  console.log(`Sources not responding as of the last probe (${health.checked_utc}):`);
+  for (const f of payload.failing_sources) console.log(`  ${f.question_id} (${f.type}): ${f.detail}`);
 }

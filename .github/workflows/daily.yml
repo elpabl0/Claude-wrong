@@ -1,13 +1,16 @@
-name: Resolve and publish
+name: Clear, resolve and publish
 
-# The mechanical half of the project. Every morning this fetches the sources
-# named in the predictions that have come due, records what they say, and
-# republishes the site. No model is involved at any point in this workflow --
-# that is the whole idea.
+# The mechanical half of the market. It closes rounds whose windows have expired
+# and clears them at a uniform price, resolves questions that have come due
+# against the sources named when they were written, and republishes the site.
+# No model is involved at any point in this workflow -- that is the whole idea.
+#
+# It runs several times a day because round windows close on their own schedule
+# and a book that has closed should be published promptly.
 
 on:
   schedule:
-    - cron: '17 6 * * *' # 06:17 UTC daily
+    - cron: '17 */6 * * *' # every six hours
   workflow_dispatch:
     inputs:
       probe:
@@ -38,6 +41,11 @@ jobs:
         with:
           node-version: '22'
 
+      - name: Clear rounds whose windows have closed
+        env:
+          MARKET_SEAL_PRIVATE_KEY: ${{ secrets.MARKET_SEAL_PRIVATE_KEY }}
+        run: node scripts/clear-round.js
+
       - name: Resolve everything due
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -48,7 +56,7 @@ jobs:
       # while there is still time to see it coming, rather than as a void on the
       # resolution date.
       - name: Probe open sources
-        if: github.event.schedule == '17 6 * * *' && github.event.inputs.probe != 'false'
+        if: github.event_name == 'schedule' && github.event.inputs.probe != 'false'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           METACULUS_TOKEN: ${{ secrets.METACULUS_TOKEN }}
@@ -57,18 +65,18 @@ jobs:
       - name: Validate what was written
         run: node scripts/validate.js
 
-      - name: Commit resolutions
+      - name: Commit clearings and resolutions
         id: commit
         run: |
           git config user.name 'wrong.aecs.io resolver'
           git config user.email 'noreply@github.com'
-          if [ -z "$(git status --porcelain ledger/)" ]; then
+          if [ -z "$(git status --porcelain questions rounds resolutions attempts analysis)" ]; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
             echo "Nothing to record today."
             exit 0
           fi
-          git add ledger/
-          git commit -m "resolve: $(date -u +%Y-%m-%d)" -m "Written by scripts/resolve.js from sources committed with the predictions."
+          git add questions rounds resolutions attempts analysis
+          git commit -m "market: clear and resolve $(date -u +%Y-%m-%dT%H:%MZ)" -m "Written by scripts/clear-round.js and scripts/resolve.js. No model involved."
           for attempt in 1 2 3 4; do
             if git push; then
               echo "changed=true" >> "$GITHUB_OUTPUT"
