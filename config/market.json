@@ -200,6 +200,17 @@
       "economics-markets": { "label": "Economics & markets", "quota_per_batch": 1 },
       "status-quo": { "label": "Status quo", "quota_per_batch": 1 }
     },
+    "short_lane_per_batch": 3,
+    "_short_lane_comment": [
+      "Declared here with the category quotas, and for the same reason: a batch",
+      "composition decided each Monday is a composition that can drift toward",
+      "whatever the house finds easy that week. Three short questions alongside",
+      "the six standard ones means roughly a dozen settle in the first month",
+      "instead of none - enough to tell whether seats disagree at all, which is",
+      "the question that gates everything else.",
+      "They are ranked in their own horizon bucket, never pooled with the long",
+      "ones, because a fortnight is an easier thing to forecast than a quarter."
+    ],
     "min_mirrored_per_batch": 2,
     "_mirrored_comment": "Mirrored questions come from open Metaculus or Manifold markets and carry the human crowd's probability at the same timestamp. They are the only reference point in the system that is not self-referential, and the quota is why they cannot be quietly dropped.",
     "min_long_horizon_per_batch": 1,
