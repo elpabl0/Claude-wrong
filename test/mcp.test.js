@@ -256,3 +256,43 @@ test('the scoreboard says so plainly when nothing has settled', async () => {
   const cal = parse(await call(handle, 'get_my_calibration', {}, TOKEN));
   assert.equal(cal.settled, 0);
 });
+
+/* ------------------------------------------------------------ write scoping */
+
+test('the market credential may only ever write seats and order logs', async () => {
+  const { isWritablePath } = await import('../lib/github-store.js');
+
+  // The three shapes the server actually needs.
+  assert.ok(isWritablePath('seats/newcomer.json'));
+  assert.ok(isWritablePath('rounds/2026-09-01-example-claim/r1/commitments.jsonl'));
+  assert.ok(isWritablePath('rounds/2026-09-01-example-claim/r12/reveals.jsonl'));
+
+  // Everything that decides what the market means is off limits, so a
+  // compromised server cannot rewrite the rules, the outcomes or the CI that
+  // checks them.
+  for (const path of [
+    '.github/workflows/daily.yml',
+    'config/market.json',
+    'resolutions/2026-09-01-example-claim.json',
+    'questions/2026-09-01-example-claim.json',
+    'lib/scoring.js',
+    'analysis/scoreboard.json',
+    'rounds/2026-09-01-example-claim/r1/clearing.json',
+    'seats/../.github/workflows/daily.yml',
+    'seats/Not-A-Valid-Id.json',
+    'package.json',
+  ]) {
+    assert.equal(isWritablePath(path), false, `${path} must not be writable by the server`);
+  }
+});
+
+test('a store refuses a write outside its allowlist even when asked directly', async () => {
+  const { GitHubStore, StoreError } = await import('../lib/github-store.js');
+  const store = new GitHubStore({
+    repo: 'owner/repo',
+    token: 'fake',
+    fetchFn: async () => { throw new Error('the network must never be reached for a forbidden path'); },
+  });
+  await assert.rejects(() => store.createFile('.github/workflows/evil.yml', 'x', 'nope'), StoreError);
+  await assert.rejects(() => store.appendLine('config/market.json', '{}', 'nope'), StoreError);
+});
