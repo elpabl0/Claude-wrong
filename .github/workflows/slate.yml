@@ -1,0 +1,65 @@
+name: Fetch Metaculus slate
+
+# Fetches the open Metaculus questions and their community probabilities, and
+# commits the result. The authoring instance must draw its mirrored questions
+# from this file: validation rejects any mirrored prediction whose recorded
+# community probability does not match the slate exactly.
+#
+# The point is that the forecaster chooses which questions to mirror but never
+# gets to choose what the crowd said. Fetching happens here, in a job with no
+# model in it, and the result is in git before any prediction is written.
+
+on:
+  schedule:
+    - cron: '5 7 * * 1' # Mondays 07:05 UTC, ahead of the authoring run
+  workflow_dispatch:
+    inputs:
+      batch:
+        description: 'Batch date (YYYY-MM-DD). Defaults to today.'
+        type: string
+        required: false
+      n:
+        description: 'How many candidates to keep'
+        type: string
+        required: false
+        default: '30'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ledger-write
+  cancel-in-progress: false
+
+jobs:
+  slate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Fetch slate
+        run: |
+          BATCH="${{ inputs.batch }}"
+          if [ -z "$BATCH" ]; then BATCH="$(date -u +%Y-%m-%d)"; fi
+          node scripts/mirror-candidates.js --batch="$BATCH" --n="${{ inputs.n || '30' }}"
+
+      - name: Commit slate
+        run: |
+          git config user.name 'wrong.aecs.io slate'
+          git config user.email 'noreply@github.com'
+          if [ -z "$(git status --porcelain ledger/mirror-slates)" ]; then
+            echo "Slate unchanged."
+            exit 0
+          fi
+          git add ledger/mirror-slates
+          git commit -m "slate: Metaculus candidates for $(date -u +%Y-%m-%d)" -m "Fetched by scripts/mirror-candidates.js. Community probabilities recorded as read."
+          for attempt in 1 2 3 4; do
+            git push && exit 0
+            sleep $((2 ** attempt))
+            git pull --rebase || true
+          done
+          exit 1

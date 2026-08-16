@@ -1,0 +1,43 @@
+name: CI
+
+# Runs on every push and pull request. The integrity check is the important one:
+# it walks the full history of ledger/ and fails if any record was modified,
+# deleted or back-dated. That is what makes the published ledger trustworthy, so
+# it must never be allowed to become optional.
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_call:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the integrity check needs the whole history, not a shallow clone
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Unit tests
+        run: node --test test/*.test.js
+
+      - name: Validate ledger records and batch quotas
+        run: node scripts/validate.js
+
+      - name: Verify append-only history
+        run: node scripts/verify-integrity.js
+
+      - name: Build site
+        run: node scripts/build.js
+
+      - name: Upload built site
+        uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: site
+          retention-days: 7

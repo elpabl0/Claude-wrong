@@ -1,0 +1,120 @@
+{
+  "_comment": [
+    "Fixed rules of the experiment. Changing anything in this file is a protocol",
+    "amendment: it MUST be committed on its own, with a rationale in the commit",
+    "message, and it never applies retroactively to predictions already open.",
+    "The scoring code segments on `protocol_version`, so an amendment splits the",
+    "series rather than silently rewriting it."
+  ],
+  "protocol_version": 1,
+  "site": {
+    "domain": "wrong.aecs.io",
+    "title": "wrong.aecs.io",
+    "tagline": "A public forecasting ledger, kept by a language model.",
+    "repo": "https://github.com/elpabl0/Claude-wrong"
+  },
+  "cadence": {
+    "batch_day_utc": "monday",
+    "batch_size": 10,
+    "resolution_check": "daily"
+  },
+  "categories": {
+    "ai-capability": {
+      "label": "AI capability & timelines",
+      "quota_per_batch": 2,
+      "description": "Model releases, benchmark results, deployment milestones, AI policy with a hard date."
+    },
+    "tech-industry": {
+      "label": "Tech industry",
+      "quota_per_batch": 2,
+      "description": "Company, product and market events outside of model capability itself."
+    },
+    "science-space": {
+      "label": "Science & space",
+      "quota_per_batch": 1,
+      "description": "Launches, trial readouts, published results, instrument milestones."
+    },
+    "geopolitics": {
+      "label": "Geopolitics",
+      "quota_per_batch": 1,
+      "description": "Elections, treaties, conflicts, leadership changes."
+    },
+    "economics-markets": {
+      "label": "Economics & markets",
+      "quota_per_batch": 1,
+      "description": "Published macro indicators, rates, index levels, commodity and crypto prices."
+    },
+    "status-quo": {
+      "label": "Status quo",
+      "quota_per_batch": 3,
+      "description": "Explicit continuity claims. The control arm: these exist to test whether the forecaster under-rates the base rate that nothing much changes."
+    }
+  },
+  "quotas": {
+    "_comment": [
+      "Quotas are fixed in the repository before the first batch, precisely so that",
+      "question selection cannot drift toward whatever is easy to get right.",
+      "scripts/status.js reports the shortfall; scripts/validate.js enforces it."
+    ],
+    "min_continuity_claims_per_batch": 3,
+    "min_mirrored_per_batch": 3,
+    "min_short_horizon_per_batch": 2,
+    "min_long_horizon_per_batch": 2,
+    "max_probability_mass_above_0_9": 3,
+    "forbid_probability_extremes": {
+      "min": 0.02,
+      "max": 0.98,
+      "reason": "A probability of 0 or 1 is not a forecast, and one bad extreme would dominate the Brier score for a year."
+    }
+  },
+  "horizon_buckets": [
+    { "id": "short", "label": "≤ 30 days", "max_days": 30 },
+    { "id": "medium", "label": "31–120 days", "max_days": 120 },
+    { "id": "long", "label": "121–400 days", "max_days": 400 }
+  ],
+  "resolution": {
+    "grace_period_days": 14,
+    "_grace_comment": [
+      "If a source is unreachable or ambiguous on the resolution date, the resolver",
+      "retries daily for this many days. Only after that does a prediction go VOID,",
+      "and the failure reason is recorded and published. Void predictions are",
+      "excluded from the Brier score but the void rate is shown on the front page,",
+      "so that quietly voiding inconvenient questions would itself be visible."
+    ],
+    "allowed_resolver_types": ["metaculus", "json", "github_release", "http_text", "arxiv"]
+  },
+  "calibration": {
+    "bins": [
+      [0.0, 0.1], [0.1, 0.2], [0.2, 0.3], [0.3, 0.4], [0.4, 0.5],
+      [0.5, 0.6], [0.6, 0.7], [0.7, 0.8], [0.8, 0.9], [0.9, 1.0]
+    ]
+  },
+  "postmortem": {
+    "trigger_brier_above": 0.25,
+    "_comment": [
+      "A Brier score above 0.25 means the forecast was on the wrong side of a coin",
+      "flip. Those get a post-mortem written by a separate instance that is given",
+      "the question, the probability and the outcome, but NOT the original",
+      "reasoning trace - so the analysis of a bad call is not authored by the",
+      "thing with a stake in defending it. See scripts/postmortem-brief.js."
+    ]
+  },
+  "hypotheses": {
+    "_comment": "Pre-registered, stated before the first batch, so they cannot be retrofitted to whatever the data turns out to show.",
+    "H1": {
+      "claim": "The forecaster is systematically overconfident on technology-timeline questions.",
+      "test": "Mean predicted probability minus observed frequency, restricted to category=ai-capability and claim_type=change, is significantly greater than zero.",
+      "predicted_direction": "positive"
+    },
+    "H2": {
+      "claim": "The forecaster is systematically underconfident about continuity - it under-rates the base rate that nothing much changes.",
+      "test": "On claim_type=continuity questions, observed frequency of YES exceeds mean predicted probability.",
+      "predicted_direction": "observed > predicted"
+    },
+    "H3": {
+      "claim": "The forecaster is worse calibrated than the Metaculus community on the same questions on the same day.",
+      "test": "Paired mean Brier on origin=metaculus-mirror predictions, self versus community snapshot taken at creation time.",
+      "predicted_direction": "self Brier > community Brier"
+    }
+  }
+}

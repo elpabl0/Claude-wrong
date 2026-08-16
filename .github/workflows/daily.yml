@@ -1,0 +1,91 @@
+name: Resolve and publish
+
+# The mechanical half of the project. Every morning this fetches the sources
+# named in the predictions that have come due, records what they say, and
+# republishes the site. No model is involved at any point in this workflow --
+# that is the whole idea.
+
+on:
+  schedule:
+    - cron: '17 6 * * *' # 06:17 UTC daily
+  workflow_dispatch:
+    inputs:
+      probe:
+        description: 'Also probe open predictions for dead sources'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: ledger-write
+  cancel-in-progress: false
+
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.commit.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Resolve everything due
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/resolve.js
+
+      # Sources rot. Probing open predictions weekly means a dead URL surfaces
+      # while there is still time to see it coming, rather than as a void on the
+      # resolution date.
+      - name: Probe open sources
+        if: github.event.schedule == '17 6 * * *' && github.event.inputs.probe != 'false'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/resolve.js --probe || true
+
+      - name: Validate what was written
+        run: node scripts/validate.js
+
+      - name: Commit resolutions
+        id: commit
+        run: |
+          git config user.name 'wrong.aecs.io resolver'
+          git config user.email 'noreply@github.com'
+          if [ -z "$(git status --porcelain ledger/)" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Nothing to record today."
+            exit 0
+          fi
+          git add ledger/
+          git commit -m "resolve: $(date -u +%Y-%m-%d)" -m "Written by scripts/resolve.js from sources committed with the predictions."
+          for attempt in 1 2 3 4; do
+            if git push; then
+              echo "changed=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            sleep $((2 ** attempt))
+            git pull --rebase || true
+          done
+          echo "Push failed after four attempts." >&2
+          exit 1
+
+      - name: Verify history is still append-only
+        run: node scripts/verify-integrity.js
+
+  publish:
+    needs: resolve
+    if: always() && needs.resolve.result == 'success'
+    uses: ./.github/workflows/pages.yml
+    permissions:
+      contents: read
+      pages: write
+      id-token: write

@@ -1,0 +1,52 @@
+name: Publish site
+
+# Builds the static site from the committed ledger and deploys it to
+# wrong.aecs.io. The site is a pure function of the repository: no database, no
+# CMS, nothing that can differ from what is in git.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ledger/**'
+      - 'lib/**'
+      - 'scripts/**'
+      - 'docs/**'
+      - 'config/**'
+      - 'site-static/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # provenance links point at the commit each record arrived in
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - run: node scripts/build.js
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deploy
+        uses: actions/deploy-pages@v4
