@@ -12,7 +12,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { paths, loadConfig, todayUTC } from '../lib/config.js';
 import { loadMarket } from '../lib/market.js';
-import { leaderboard, errorCorrelationMatrix, crowdComparison, updateSpeed } from '../lib/scoring.js';
+import { leaderboard, leaderboardByHorizon, errorCorrelationMatrix, crowdComparison, updateSpeed } from '../lib/scoring.js';
 import { liveness } from '../lib/liveness.js';
 
 const config = loadConfig();
@@ -25,6 +25,8 @@ const scoreboard = {
   ranked_by: config.scoring.rank_by,
   ranking_note:
     'Ranked on log score per contract. Total score scales with how much a seat trades, so ranking on it would let a bigger bankroll buy position; per-contract score cannot be bought that way, and the score is zero-sum, so extra seats transfer score rather than create it.',
+  horizon_note:
+    'The pooled leaderboard is confounded by horizon: a two-day question is easier to be right about than a ninety-day one, so a seat that traded only short questions scores better per contract without forecasting better. leaderboard_by_horizon is the comparison that means something. Questions in an unscored lane (currently: canary) appear in no score at all.',
   counts: {
     questions: market.questions.length,
     open: market.open.length,
@@ -36,6 +38,7 @@ const scoreboard = {
   // so it must be published rather than recomputed there from a different code path.
   settled_question_ids: market.questions.filter((q) => q.settlement).map((q) => q.question.id),
   leaderboard: leaderboard(market.positionsBySeat, market.seats, config),
+  leaderboard_by_horizon: leaderboardByHorizon(market.positionsBySeat, market.seats, config),
   bankrolls: [...market.bankrolls.values()],
   cross_model_error_correlation: errorCorrelationMatrix(market.positionsBySeat),
   crowd_comparison: crowdComparison(market.positionsBySeat, market.questionsById),

@@ -17,17 +17,44 @@ import { loadConfig, todayUTC } from '../lib/config.js';
 const config = loadConfig();
 
 /**
+ * Which lane a question belongs to, from its horizon.
+ *
+ * Declared by horizon rather than chosen by the author, so the lane cannot be
+ * picked to flatter a result: a two-day question is a short-lane question
+ * whatever anyone would prefer it to be.
+ */
+export function laneFor(horizonDays, cfg = config) {
+  for (const [id, lane] of Object.entries(cfg.lanes ?? {})) {
+    if (id.startsWith('_')) continue; // config comments live alongside the data
+    const [lo, hi] = lane.horizon_days;
+    if (horizonDays >= lo && horizonDays <= hi) return id;
+  }
+  return 'standard';
+}
+
+/**
  * Rounds sit at fixed distances before resolution, tightening as the date
  * approaches. Anything that would open before the question exists is dropped, so
  * a short-horizon question simply gets fewer rounds rather than a squashed
  * schedule.
+ *
+ * The ladder comes from the question's lane. The standard ladder starts at
+ * ninety days out, so applied to a three-day question every rung would be
+ * filtered away and the question would exist with no rounds at all - written,
+ * listed, and impossible to trade. Picking the ladder by lane is what stops that.
  */
-export function buildSchedule(createdDate, resolution, cfg = config) {
+export function buildSchedule(createdDate, resolution, cfg = config, lane = null) {
   const resolveAt = Date.parse(`${resolution}T00:00:00Z`);
   const createdAt = Date.parse(`${createdDate}T00:00:00Z`);
-  const windowMs = cfg.rounds.window_hours * 3600 * 1000;
+  const horizon = Math.round((resolveAt - createdAt) / 86400000);
+  const laneId = lane ?? laneFor(horizon, cfg);
+  const ladder = cfg.rounds.ladders?.[cfg.lanes?.[laneId]?.ladder ?? 'standard'] ?? {
+    t_minus_days: cfg.rounds.schedule_t_minus_days,
+    window_hours: cfg.rounds.window_hours,
+  };
+  const windowMs = (ladder.window_hours ?? cfg.rounds.window_hours) * 3600 * 1000;
 
-  return cfg.rounds.schedule_t_minus_days
+  return ladder.t_minus_days
     .slice()
     .sort((a, b) => b - a)
     .map((t) => {
@@ -63,7 +90,9 @@ if (!resolutionDate || !/^\d{4}-\d{2}-\d{2}$/.test(resolutionDate)) {
   process.exit(2);
 }
 
-const rounds = buildSchedule(created, resolutionDate);
+const horizonDays = Math.round((Date.parse(`${resolutionDate}T00:00:00Z`) - Date.parse(`${created}T00:00:00Z`)) / 86400000);
+const lane = arg('lane', laneFor(horizonDays));
+const rounds = buildSchedule(created, resolutionDate, config, lane);
 
 if (process.argv.includes('--schedule-only')) {
   console.log(JSON.stringify(rounds, null, 2));
@@ -71,7 +100,11 @@ if (process.argv.includes('--schedule-only')) {
 }
 
 if (!rounds.length) {
-  console.error(`No round fits between ${created} and ${resolutionDate}. The horizon is too short for the configured schedule (${config.rounds.schedule_t_minus_days.join(', ')} days out).`);
+  console.error(
+    `No round fits between ${created} and ${resolutionDate} on the ${lane} ladder ` +
+      `(${config.rounds.ladders[config.lanes[lane].ladder].t_minus_days.join(', ')} days out).\n` +
+      'A question nobody can trade is worse than no question: it appears on the site, looks live, and silently never clears.',
+  );
   process.exit(1);
 }
 
@@ -81,6 +114,7 @@ const skeleton = {
   author_model: '<the exact model string you are running as>',
   protocol_version: config.protocol_version,
   category: `<one of: ${Object.keys(config.questions.categories).join(', ')}>`,
+  lane,
   origin: 'house',
   claim: '<a binary claim, stated so that YES or NO is the only possible answer>',
   resolution_date: resolutionDate,
@@ -96,7 +130,8 @@ const skeleton = {
 
 console.log(JSON.stringify(skeleton, null, 2));
 console.error(
-  `\n${rounds.length} round(s) scheduled: ${rounds.map((r) => `${r.id} at T-${r.t_minus_days}`).join(', ')}.\n` +
+  `\n${lane} lane, ${horizonDays}-day horizon, ${config.lanes[lane].scored ? 'scored' : 'UNSCORED'}.\n` +
+    `${rounds.length} round(s) scheduled: ${rounds.map((r) => `${r.id} at T-${r.t_minus_days}`).join(', ')}.\n` +
     `Write this to questions/${skeleton.id}.json, fill in every angle-bracketed field, then run node scripts/validate.js.`,
 );
 }

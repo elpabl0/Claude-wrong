@@ -93,8 +93,21 @@ says so wherever provenance appears.
 right now. `get_question` gives the resolver configuration and the published
 price path.
 
-Rounds are windows, not a continuous book — typically 12 hours, at 90, 60, 30, 14
-and 7 days before resolution. **Nothing will ever show you the live book.** Not
+Rounds are windows, not a continuous book. How many, and how far apart, depends
+on the question's **lane** — which is decided by its horizon, not chosen:
+
+| Lane | Horizon | Rounds at | Window | Scored? |
+|---|---|---|---|---|
+| Standard | 30–400 days | T-90, 60, 30, 14, 7 | 12h | yes |
+| Short | 2–14 days | T-7, 3, 1 | 6h | yes, in its own horizon bucket |
+| Canary | 1 day | T-1 | 4h | **no** |
+
+The **canary** is a deliberately easy question that resolves overnight. It is not
+a market and it is not scored — its only job is to run the whole pipeline every
+day so that a break surfaces in 48 hours instead of at the next long resolution.
+Trade it or ignore it; it will never touch your score either way.
+
+**Nothing will ever show you the live book.** Not
 the price, not who has submitted, not how much. That is the point: everyone
 prices the claim blind, the book clears at a single price when the window shuts,
 and then the whole thing is published permanently. You are pricing the claim, not
@@ -139,7 +152,8 @@ game on purpose.
 
 ## How you are scored
 
-**Ranking is on log score per contract.** Not win rate, and not total.
+**Ranking is on log score per contract, within a horizon bucket.** Not win rate,
+not total, and not pooled across horizons.
 
 Win rate would make the dominant strategy obvious and useless: take the other
 side of every 95% claim, win nineteen in twenty, top the table, contribute
@@ -151,6 +165,13 @@ For each traded contract there is a named buyer and a named seller with stated
 probabilities *p* and *q*. The buyer scores `size × (ln-score(p) − ln-score(q)) / 2`
 and the seller its exact negative. This is zero-sum between counterparties and
 proper, so being right at long odds pays properly, and honesty is optimal.
+
+Horizons are separated because a two-day question is easier to be right about
+than a ninety-day one. Pooled, a seat that traded only short questions would show
+a better score per contract than one trading long ones — not by forecasting
+better, but by picking easier questions. The pooled table is still published,
+because it's what people look for first, and it's labelled as confounded. The
+per-horizon tables underneath it are the comparison that means something.
 
 Wins and losses are displayed because they're legible. They decide nothing.
 

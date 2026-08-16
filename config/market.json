@@ -34,10 +34,80 @@
     ],
     "schedule_t_minus_days": [90, 60, 30, 14, 7],
     "window_hours": 12,
+    "_ladder_comment": [
+      "Rungs sit at fixed distances before resolution, so a question's whole",
+      "schedule is known the moment it is written and can never be adjusted once",
+      "the news is in. The standard ladder assumes a long horizon; applied to a",
+      "three-day question every rung would be filtered out and the question would",
+      "have no rounds at all. So each lane declares its own ladder, chosen by",
+      "horizon at authoring time and then frozen with the question."
+    ],
+    "ladders": {
+      "standard": { "t_minus_days": [90, 60, 30, 14, 7], "window_hours": 12 },
+      "short": { "t_minus_days": [7, 3, 1], "window_hours": 6 },
+      "canary": { "t_minus_days": [1], "window_hours": 4 }
+    },
     "min_orders_to_clear": 2,
     "min_distinct_seats_to_clear": 2,
     "opening_price": 0.5,
     "_opening_price_comment": "Round 1 has no prior. 0.5 is the only prior that expresses no opinion."
+  },
+
+  "lanes": {
+    "_comment": [
+      "Three lanes, answering three different questions. They are declared here",
+      "rather than inferred from the horizon, because what separates them is",
+      "purpose, not clock speed.",
+      "",
+      "The floor on how short a SCORED question may be is not set by how fast a",
+      "source can be read. It is set by whether well-informed forecasters would",
+      "still disagree. Below roughly a day, questions collapse into two useless",
+      "shapes: near-random (a price six hours out, where the honest answer is 0.5",
+      "for everyone) and near-determined (a scheduled event today, where it is",
+      "0.97 for everyone). Both are trivially easy to be calibrated on and neither",
+      "discriminates between forecasters at all. A market with no disagreement in",
+      "it produces no information, however fast it settles.",
+      "",
+      "So the canary lane is deliberately NOT scored. It is a smoke test wearing",
+      "the shape of a market: its job is to drive the full submit-seal-clear-",
+      "resolve-settle path every single day so that a broken pipeline surfaces in",
+      "48 hours instead of at the next long resolution. Scoring it would import",
+      "exactly the easy-question bias it exists to avoid."
+    ],
+    "standard": {
+      "label": "Standard",
+      "horizon_days": [30, 400],
+      "ladder": "standard",
+      "scored": true,
+      "description": "The research question: can a model reason about an uncertain future months out?"
+    },
+    "short": {
+      "label": "Short",
+      "horizon_days": [2, 14],
+      "ladder": "short",
+      "scored": true,
+      "description": "Resolves within a fortnight, so calibration data accumulates in weeks rather than months. Ranked in its own horizon bucket - see scoring.rank_within_horizon."
+    },
+    "canary": {
+      "label": "Canary",
+      "horizon_days": [1, 1],
+      "ladder": "canary",
+      "scored": false,
+      "description": "Unscored. Exists to exercise the whole pipeline daily and give liveness something that bites every day rather than every eight.",
+      "authoring_shape": "near-coinflip",
+      "_authoring_shape_comment": [
+        "A canary must be written so the honest answer is close to 0.5 - a price",
+        "against its own current level, not a threshold it will obviously clear.",
+        "The obvious canary is a claim that is certainly true, and that is exactly",
+        "the one that does not work: every seat bids YES, nobody takes the other",
+        "side, and the round fails to clear. A test that cannot complete tests",
+        "nothing.",
+        "So the property that makes a coin-flip a worthless SCORED question - no",
+        "forecaster can beat any other on it - is the same property that makes it",
+        "a reliable pipeline test. That is the whole reason this lane is unscored",
+        "rather than merely down-weighted."
+      ]
+    }
   },
 
   "bankroll": {
@@ -83,6 +153,19 @@
     "rank_by": "log_score_per_contract",
     "display_win_loss": true,
     "min_settled_to_rank": 5,
+    "rank_within_horizon": true,
+    "_rank_within_horizon_comment": [
+      "A short-horizon question is easier to be right about than a ninety-day one,",
+      "so pooling them on a single table would let a seat climb by choosing easy",
+      "questions rather than by forecasting well. That would quietly corrupt the",
+      "one number this whole system exists to produce.",
+      "The overall table is still published, because it is what most readers want",
+      "to see, but it is explicitly labelled as horizon-confounded and the",
+      "per-bucket tables sit beside it as the comparison that actually means",
+      "something."
+    ],
+    "exclude_lanes": ["canary"],
+    "_exclude_lanes_comment": "Canary questions never enter any score, any calibration curve, or any correlation matrix. They exist to prove the pipeline runs, and a smoke test that flattered the leaderboard would be worse than no smoke test.",
     "clamp_probability": 0.01,
     "_clamp_comment": "A log score is unbounded at 0 and 1. Limits are already confined to (0.02, 0.98); this clamp is belt-and-braces so one degenerate record cannot swallow a year of scores.",
     "calibration_bins": [
