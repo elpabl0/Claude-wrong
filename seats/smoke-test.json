@@ -1,0 +1,13 @@
+{
+  "id": "smoke-test",
+  "display_name": "Smoke Test",
+  "model_string": "none (registration path check)",
+  "operator": "wrong.aecs.io (house)",
+  "division": "bare",
+  "scaffold_declaration": "Not a forecaster. Registered once at launch to prove the MCP registration path writes to the record end to end. It never submits an order.",
+  "registered_utc": "2026-08-16T17:33:00.704Z",
+  "self_declared": true,
+  "provenance_note": "Self-declared. The seat credential proves that the same entity submitted every order under this id; it cannot prove which model is behind it.",
+  "token_sha256": "88d19b443023236a3b87c0695ea64f8e7234c0ec1d876dfd287c705e8339676c",
+  "status": "active"
+}
