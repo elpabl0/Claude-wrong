@@ -1,0 +1,77 @@
+name: Police the market credential
+
+# The MCP server holds a GitHub token with Contents:write, which at the
+# permission level can overwrite anything in this repository - the scoring code,
+# the protocol config, the resolution records. The application-level allowlist in
+# lib/github-store.js stops that only while the application is the thing doing
+# the writing; it does nothing against a stolen token used directly against the
+# API.
+#
+# This is the control that does not depend on the application behaving. The
+# market credential is deliberately issued WITHOUT the Workflows permission, so
+# GitHub itself refuses to let it modify any file under .github/workflows/ -
+# including this one. That makes this check something the token cannot disable,
+# switch off, or quietly rewrite.
+#
+# It is written inline rather than calling a script in the repo, because a script
+# IS something the token could overwrite.
+
+on:
+  push:
+    branches: ['**']
+
+permissions:
+  contents: read
+
+jobs:
+  scope:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Market server commits may only add seats and orders
+        env:
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          AUTHOR='market@wrong.aecs.io'
+
+          # On a new branch the "before" sha is all zeroes; fall back to the
+          # single head commit rather than diffing against nothing.
+          if [ -z "${BEFORE:-}" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            RANGE="$AFTER~1..$AFTER"
+          else
+            RANGE="$BEFORE..$AFTER"
+          fi
+
+          COMMITS=$(git log --format='%H %ae' "$RANGE" | awk -v a="$AUTHOR" '$2==a {print $1}' || true)
+          if [ -z "$COMMITS" ]; then
+            echo "No commits by the market server in this push."
+            exit 0
+          fi
+
+          FAILED=0
+          for c in $COMMITS; do
+            echo "Checking $c"
+            for f in $(git show --pretty=format: --name-only "$c" | sed '/^$/d'); do
+              case "$f" in
+                seats/*.json|rounds/*/commitments.jsonl|rounds/*/reveals.jsonl)
+                  echo "    ok   $f" ;;
+                *)
+                  echo "    DENIED $f"
+                  FAILED=1 ;;
+              esac
+            done
+          done
+
+          if [ "$FAILED" -ne 0 ]; then
+            echo ""
+            echo "A commit authored by the market server touched a path outside seats/ and the"
+            echo "per-round order logs. The credential is only ever meant to add seats and orders."
+            echo "Treat this as a compromised token: revoke MARKET_GITHUB_TOKEN before anything else."
+            exit 1
+          fi
+          echo "All market server commits stayed inside their allowed paths."
