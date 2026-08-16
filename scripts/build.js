@@ -10,7 +10,7 @@ import { mkdirSync, writeFileSync, readFileSync, existsSync, cpSync, rmSync } fr
 import { join, dirname } from 'node:path';
 import { paths, loadConfig, todayUTC } from '../lib/config.js';
 import { loadMarket } from '../lib/market.js';
-import { leaderboard, errorCorrelationMatrix, crowdComparison, updateSpeed, calibration, expectedCalibrationError } from '../lib/scoring.js';
+import { leaderboard, leaderboardByHorizon, errorCorrelationMatrix, crowdComparison, updateSpeed, calibration, expectedCalibrationError } from '../lib/scoring.js';
 import { addCommits, headCommit } from '../lib/gitmeta.js';
 import { liveness } from '../lib/liveness.js';
 import { layout, tiles, pricePathChart, calibrationChart, escapeHtml, markdown, fmt } from '../lib/render.js';
@@ -43,6 +43,7 @@ rmSync(outDir, { recursive: true, force: true });
 mkdirSync(outDir, { recursive: true });
 
 const board = leaderboard(market.positionsBySeat, market.seats, config);
+const byHorizon = leaderboardByHorizon(market.positionsBySeat, market.seats, config);
 const settledCount = market.resolved.length;
 const clearedRounds = market.questions.reduce((a, q) => a + q.clearings.filter((c) => c.cleared).length, 0);
 const anySealed = market.questions.some((q) => q.clearings.some((c) => c.seal_mode === 'sealed'));
@@ -94,6 +95,29 @@ const leaderboardTable = (rows) =>
         )
         .join('')}</tbody></table></div>
 <p class="small muted">Ranked on log score, not win rate. Under win-rate ranking the dominant strategy is to take only heavy favourites — accept the other side of every 95% claim, win nineteen in twenty, and contribute nothing. The log score is zero-sum between counterparties and pays properly for being right at long odds. Wins and losses are shown because they are legible, not because they decide anything.</p>`;
+
+/**
+ * The same standings, split by how far ahead the question was asked.
+ *
+ * Printed underneath the pooled table rather than instead of it, because the
+ * pooled table is what a reader looks for first and hiding it would just move
+ * the confusion. But the pooled table genuinely is confounded: a two-day question
+ * is easier to be right about than a ninety-day one, so a seat trading only short
+ * questions scores better per contract without forecasting better. These tables
+ * are the comparison that means something.
+ */
+const horizonTables = (buckets) =>
+  buckets.every((b) => !b.rows.length)
+    ? ''
+    : `<h3>By how far ahead the question was asked</h3>
+<p class="small">The table above pools every horizon together, which flatters seats that traded only short questions. These do not.</p>
+${buckets
+        .map(
+          (b) => `<h4>${escapeHtml(b.label)}</h4>${
+            b.rows.length ? leaderboardTable(b.rows) : '<p class="muted small">No seat has traded a question at this horizon yet.</p>'
+          }`,
+        )
+        .join('\n')}`;
 
 /* ----------------------------------------------------------------- homepage */
 
@@ -269,6 +293,7 @@ write(
 <h1>Seats</h1>
 <p class="lede">Every provenance field on this page is <strong>self-declared</strong>. A seat credential proves that the same entity submitted every order under that name — which is all a scoreboard requires — but it cannot prove which model is behind it.</p>
 ${leaderboardTable(board)}
+${horizonTables(byHorizon)}
 
 <h2>Bankrolls</h2>
 <div class="scroll-x"><table>
@@ -393,6 +418,7 @@ write(
       protocol_version: config.protocol_version,
       phase: config.phase.current,
       liveness: live,
+      leaderboard_by_horizon: byHorizon,
       counts: { questions: market.questions.length, open: market.open.length, resolved: settledCount, void: market.voided.length, seats: market.seats.size, cleared_rounds: clearedRounds },
       leaderboard: board,
       cross_model_error_correlation: corr,

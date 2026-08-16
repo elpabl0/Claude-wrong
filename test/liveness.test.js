@@ -6,11 +6,18 @@ import { loadConfig } from '../lib/config.js';
 const config = loadConfig();
 const NOW = new Date('2026-09-01T12:00:00.000Z');
 
+/** A canary that resolved `daysAgo` days before NOW. */
+const canary = (daysAgo) => ({
+  lane: 'canary',
+  question: { id: `canary-${daysAgo}`, created_utc: '2026-08-30T00:00:00.000Z' },
+  resolution: { resolved_utc: new Date(NOW.getTime() - daysAgo * 86400000).toISOString() },
+});
+
 /** A market shaped the way loadMarket returns one, with everything healthy. */
 function healthy(overrides = {}) {
   return {
     config,
-    questions: [{ question: { id: 'q1', created_utc: '2026-08-30T00:00:00.000Z' } }],
+    questions: [{ lane: 'standard', question: { id: 'q1', created_utc: '2026-08-30T00:00:00.000Z' } }, canary(0)],
     roundsAwaitingClear: [],
     awaitingResolution: [],
     openRounds: [],
@@ -19,6 +26,7 @@ function healthy(overrides = {}) {
 }
 
 const check = (r, id) => r.checks.find((c) => c.id === id);
+const authored = (createdUtc) => ({ lane: 'standard', question: { id: `q-${createdUtc}`, created_utc: createdUtc } });
 
 test('a market doing everything on time reports running', () => {
   const r = liveness(healthy(), { now: NOW });
@@ -35,23 +43,58 @@ test('a market with no questions at all is not-started, not stalled', () => {
   assert.equal(check(r, 'authoring').severity, 'never-run');
 });
 
+test('a daily canary must not hold the authoring check green', () => {
+  // The failure this guards against: canaries are written every day, so if they
+  // counted as "questions written" the weekly batch could stop for a month and
+  // the check would never go red. Monitoring that masks its own failure is worse
+  // than none, because it is trusted.
+  const r = liveness(healthy({ questions: [authored('2026-08-01T00:00:00.000Z'), canary(0)] }), { now: NOW });
+  assert.equal(check(r, 'authoring').ok, false, 'a fresh canary must not stand in for a stale weekly batch');
+  assert.equal(check(r, 'canary').ok, true, 'and the canary check itself is still green');
+});
+
+test('the canary is the check that fires within days rather than months', () => {
+  const q = { lane: 'standard', question: { id: 'q1', created_utc: '2026-08-30T00:00:00.000Z' } };
+
+  const fresh = liveness(healthy({ questions: [q, canary(1)] }), { now: NOW });
+  assert.equal(check(fresh, 'canary').ok, true);
+
+  const stale = liveness(healthy({ questions: [q, canary(4)] }), { now: NOW });
+  assert.equal(check(stale, 'canary').ok, false);
+  assert.equal(stale.state, 'stalled');
+  assert.match(check(stale, 'canary').detail, /4 days/);
+});
+
+test('canaries written but never resolved is a stall, not a pass', () => {
+  // The dangerous version of this bug: canaries pile up unresolved and the check
+  // reads "canaries exist" as "the pipeline works".
+  const written = { lane: 'canary', question: { id: 'c1', created_utc: '2026-08-31T00:00:00.000Z' }, resolution: null };
+  const r = liveness(healthy({ questions: [written] }), { now: NOW });
+  assert.equal(check(r, 'canary').ok, false);
+  assert.match(check(r, 'canary').detail, /none resolved/);
+});
+
+test('the newest canary decides, so one old resolved canary cannot mask a broken pipeline', () => {
+  const q = { lane: 'standard', question: { id: 'q1', created_utc: '2026-08-30T00:00:00.000Z' } };
+  const r = liveness(healthy({ questions: [q, canary(30), canary(1)] }), { now: NOW });
+  assert.equal(check(r, 'canary').ok, true);
+
+  const broken = liveness(healthy({ questions: [q, canary(30), canary(9)] }), { now: NOW });
+  assert.equal(check(broken, 'canary').ok, false);
+});
+
 test('questions written weekly are stale after eight days', () => {
-  const ok = liveness(healthy({ questions: [{ question: { id: 'q1', created_utc: '2026-08-24T00:00:00.000Z' } }] }), { now: NOW });
+  const ok = liveness(healthy({ questions: [authored('2026-08-24T00:00:00.000Z'), canary(0)] }), { now: NOW });
   assert.equal(check(ok, 'authoring').ok, true, 'eight days is still within the weekly cycle');
 
-  const stale = liveness(healthy({ questions: [{ question: { id: 'q1', created_utc: '2026-08-23T00:00:00.000Z' } }] }), { now: NOW });
+  const stale = liveness(healthy({ questions: [authored('2026-08-23T00:00:00.000Z'), canary(0)] }), { now: NOW });
   assert.equal(check(stale, 'authoring').ok, false);
   assert.equal(stale.state, 'stalled');
 });
 
 test('the newest question decides staleness, not the first one found', () => {
   const r = liveness(
-    healthy({
-      questions: [
-        { question: { id: 'old', created_utc: '2026-06-01T00:00:00.000Z' } },
-        { question: { id: 'new', created_utc: '2026-08-31T00:00:00.000Z' } },
-      ],
-    }),
+    healthy({ questions: [authored('2026-06-01T00:00:00.000Z'), authored('2026-08-31T00:00:00.000Z'), canary(0)] }),
     { now: NOW },
   );
   assert.equal(check(r, 'authoring').ok, true);
@@ -98,7 +141,7 @@ test('an open round past halfway with no orders is quiet, and quiet is not stall
 
 test('every check reports an id, a label and a human-readable detail', () => {
   const r = liveness(healthy(), { now: NOW });
-  assert.deepEqual(r.checks.map((c) => c.id), ['authoring', 'clearing', 'resolution', 'participation']);
+  assert.deepEqual(r.checks.map((c) => c.id), ['authoring', 'clearing', 'resolution', 'canary', 'participation']);
   for (const c of r.checks) {
     assert.ok(c.label && c.detail, `${c.id} must explain itself: a check nobody can read is a check nobody acts on`);
   }

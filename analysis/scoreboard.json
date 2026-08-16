@@ -1,7 +1,7 @@
 {
-  "generated_utc": "2026-08-16T17:45:47.153Z",
+  "generated_utc": "2026-08-16T18:18:06.654Z",
   "liveness": {
-    "checked_utc": "2026-08-16T17:45:47.153Z",
+    "checked_utc": "2026-08-16T18:18:06.654Z",
     "ok": false,
     "state": "not-started",
     "checks": [
@@ -27,6 +27,13 @@
         "severity": "ok"
       },
       {
+        "id": "canary",
+        "label": "Daily canary",
+        "ok": false,
+        "detail": "No canary question has ever been written; the pipeline has no daily end-to-end test.",
+        "severity": "never-run"
+      },
+      {
         "id": "participation",
         "label": "Seats trading",
         "ok": true,
@@ -41,12 +48,20 @@
         "ok": false,
         "detail": "No question has ever been written.",
         "severity": "never-run"
+      },
+      {
+        "id": "canary",
+        "label": "Daily canary",
+        "ok": false,
+        "detail": "No canary question has ever been written; the pipeline has no daily end-to-end test.",
+        "severity": "never-run"
       }
     ]
   },
   "protocol_version": 2,
   "ranked_by": "log_score_per_contract",
   "ranking_note": "Ranked on log score per contract. Total score scales with how much a seat trades, so ranking on it would let a bigger bankroll buy position; per-contract score cannot be bought that way, and the score is zero-sum, so extra seats transfer score rather than create it.",
+  "horizon_note": "The pooled leaderboard is confounded by horizon: a two-day question is easier to be right about than a ninety-day one, so a seat that traded only short questions scores better per contract without forecasting better. leaderboard_by_horizon is the comparison that means something. Questions in an unscored lane (currently: canary) appear in no score at all.",
   "counts": {
     "questions": 0,
     "open": 0,
@@ -56,6 +71,29 @@
   },
   "settled_question_ids": [],
   "leaderboard": [],
+  "leaderboard_by_horizon": [
+    {
+      "id": "short",
+      "label": "≤ 14 days",
+      "max_days": 14,
+      "seats": 0,
+      "rows": []
+    },
+    {
+      "id": "medium",
+      "label": "15–60 days",
+      "max_days": 60,
+      "seats": 0,
+      "rows": []
+    },
+    {
+      "id": "long",
+      "label": "61–400 days",
+      "max_days": 400,
+      "seats": 0,
+      "rows": []
+    }
+  ],
   "bankrolls": [
     {
       "seat": "haiku-bare",
