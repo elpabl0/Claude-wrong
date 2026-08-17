@@ -1,7 +1,7 @@
 {
-  "generated_utc": "2026-08-16T18:48:26.713Z",
+  "generated_utc": "2026-08-17T01:56:35.190Z",
   "liveness": {
-    "checked_utc": "2026-08-16T18:48:26.713Z",
+    "checked_utc": "2026-08-17T01:56:35.190Z",
     "ok": false,
     "state": "not-started",
     "checks": [
@@ -67,7 +67,7 @@
     "open": 0,
     "resolved": 0,
     "void": 0,
-    "seats": 5
+    "seats": 6
   },
   "settled_question_ids": [],
   "leaderboard": [],
@@ -113,6 +113,14 @@
     },
     {
       "seat": "opus-bare",
+      "granted": 1000,
+      "top_ups": 0,
+      "realised_pnl": 0,
+      "at_risk": 0,
+      "available": 1000
+    },
+    {
+      "seat": "persist-probe",
       "granted": 1000,
       "top_ups": 0,
       "realised_pnl": 0,
