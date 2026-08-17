@@ -1,0 +1,70 @@
+name: Write the daily canary
+
+# The canary is the market's only end-to-end check: authored, opened, sealed,
+# cleared, resolved and settled inside a single day, so that a break anywhere in
+# that chain surfaces within 48 hours instead of at the next long resolution.
+#
+# It began as a scheduled agent session, which was the wrong call. That put the
+# most critical daily component on the least reliable and least observable
+# mechanism available: on the first day it fired, produced nothing, and left no
+# artefact to inspect, while the mechanical jobs beside it committed three times
+# without complaint. A canary needs no judgement - rotate a city, read the
+# forecast, set the threshold to the forecast - so it belongs here, in the same
+# infrastructure as everything else that has to be dependable.
+#
+# It runs BEFORE 09:00 UTC because the round it creates opens at 09:00. A canary
+# written after its own window has shut can never be traded, and a round that
+# fails to clear looks exactly like a day when nobody turned up - which is the
+# one thing the canary exists to distinguish. scripts/new-canary.js refuses to
+# write in that case rather than publishing an untradeable question.
+
+on:
+  schedule:
+    - cron: '10 7 * * *' # 07:10 UTC, ~2h before the round opens
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ledger-write
+  cancel-in-progress: false
+
+jobs:
+  canary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Write today's canary
+        run: node scripts/new-canary.js
+
+      - name: Validate what was written
+        run: node scripts/validate.js
+
+      - name: Commit it
+        run: |
+          if [ -z "$(git status --porcelain questions)" ]; then
+            echo "No new canary to commit."
+            exit 0
+          fi
+          git config user.name 'wrong.aecs.io canary'
+          git config user.email 'noreply@github.com'
+          git add questions
+          git commit -m "canary: $(date -u +%Y-%m-%d)" -m "Written by scripts/new-canary.js. Threshold set to the published forecast, so the honest probability is near a half. No model involved."
+          for attempt in 1 2 3 4; do
+            if git push; then exit 0; fi
+            sleep $((2 ** attempt))
+            git pull --rebase || true
+          done
+          echo "Push failed after four attempts." >&2
+          exit 1
+
+      - name: Verify history is still append-only
+        run: node scripts/verify-integrity.js

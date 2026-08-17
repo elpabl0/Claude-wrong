@@ -155,3 +155,25 @@ test('the provisional threshold applies inside a bucket, not just overall', () =
   assert.equal(byHorizon.find((b) => b.id === 'long').rows[0].ranked, true);
   assert.equal(byHorizon.find((b) => b.id === 'short').rows[0].ranked, false);
 });
+
+/* ---------------------------------------------------------------- canary */
+
+test('a canary schedule always yields exactly one tradeable round', async () => {
+  // The canary is authored mechanically every morning, so its schedule has to be
+  // right for any date rather than for one that was checked by hand.
+  for (const day of ['2026-01-31', '2026-02-28', '2026-06-30', '2026-12-31']) {
+    const next = new Date(Date.parse(`${day}T00:00:00Z`) + 86400000).toISOString().slice(0, 10);
+    const rounds = buildSchedule(day, next, config, 'canary');
+    assert.equal(rounds.length, 1, `${day} → ${next} should give one round`);
+    assert.ok(rounds[0].opens_utc.startsWith(day), 'the round opens on the day the claim is about');
+    assert.ok(rounds[0].closes_utc < `${next}T00:00:00Z`, 'and closes before the answer is knowable');
+  }
+});
+
+test('the canary lane is the one the mechanical author will select', () => {
+  // scripts/new-canary.js passes lane explicitly, but it computes tomorrow as the
+  // resolution date; if that ever stopped landing in the canary lane the question
+  // would be written unscored while validating as something else.
+  assert.equal(laneFor(1), 'canary');
+  assert.equal(config.lanes.canary.scored, false);
+});
