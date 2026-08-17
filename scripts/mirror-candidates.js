@@ -6,7 +6,7 @@
  * The mirrored questions are the only external reference point this ledger has,
  * and they are worth nothing if the community probability is recalled rather
  * than read. So the number is never typed by hand: this script fetches the
- * slate, writes it to ledger/mirror-slates/<batch>.json, and scripts/validate.js
+ * slate, writes it to market-slates/<batch>.json, and scripts/validate.js
  * then refuses any mirrored prediction whose recorded community probability does
  * not match its slate exactly. The forecaster picks which questions to mirror;
  * it does not get to pick what the crowd said.
@@ -32,7 +32,7 @@ const batch = arg('batch', todayUTC());
 const want = Number(arg('n', 30));
 const toStdout = process.argv.includes('--stdout');
 
-const maxDays = config.horizon_buckets[config.horizon_buckets.length - 1].max_days;
+const maxDays = config.scoring.horizon_buckets[config.scoring.horizon_buckets.length - 1].max_days;
 
 /** Shared admissibility rules, whichever platform a question came from. */
 function admissible({ close, crowd }) {
@@ -184,7 +184,7 @@ if (all.length === 0) {
 // the batch quotas need long-horizon questions to draw from too.
 const buckets = new Map();
 for (const q of all) {
-  const bucket = config.horizon_buckets.find((b) => q.horizon_days <= b.max_days)?.id ?? 'long';
+  const bucket = config.scoring.horizon_buckets.find((b) => q.horizon_days <= b.max_days)?.id ?? 'long';
   const key = `${q.platform}:${bucket}`;
   if (!buckets.has(key)) buckets.set(key, []);
   buckets.get(key).push(q);
@@ -214,7 +214,13 @@ const slate = {
 if (toStdout) {
   console.log(JSON.stringify(slate, null, 2));
 } else {
-  const dir = join(paths.root, 'ledger', 'mirror-slates');
+  // paths.slates, not a path spelled out again here. This wrote to
+  // ledger/mirror-slates/ while validate.js, verify-integrity.js and slate.yml
+  // all read market-slates/, so no slate was ever committed - and because
+  // validate.js rejects a mirrored question with no committed slate, the two
+  // mirrored questions every batch is required to carry could not be written at
+  // all. A silent path disagreement blocked the whole weekly run.
+  const dir = paths.slates;
   mkdirSync(dir, { recursive: true });
   const file = join(dir, `${batch}.json`);
   writeFileSync(file, JSON.stringify(slate, null, 2) + '\n');
