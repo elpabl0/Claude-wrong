@@ -94,11 +94,12 @@ jobs:
       - name: Verify history is still append-only
         run: node scripts/verify-integrity.js
 
-  publish:
-    needs: resolve
-    if: always() && needs.resolve.result == 'success'
-    uses: ./.github/workflows/pages.yml
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
+# The site is served by Railway, which redeploys from main on its own. GitHub
+# Pages was an alternative publishing path that was never enabled on this
+# repository, so this job called it every six hours and failed every six hours -
+# turning the run red on a step that publishes nothing anybody reads.
+#
+# A workflow that is always red is worse than no workflow: it trains everyone to
+# ignore the colour, and the next failure that does matter arrives looking
+# exactly like this one. pages.yml is kept and can still be dispatched by hand if
+# Pages is ever turned on; it is simply no longer on the schedule.
