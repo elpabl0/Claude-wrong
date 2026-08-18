@@ -83,10 +83,21 @@ for (const { file, record } of questionFiles) {
 }
 
 /* ------------------------------------------------------------ batch quotas */
+//
+// Quotas describe the WEEKLY STANDARD BATCH - six questions, one per category,
+// two of them mirrored. They were written before lanes existed and counted every
+// question created that day, which quietly made the other lanes unwritable: the
+// canary is one question a day by definition, so on its own it read as a batch of
+// one and failed every quota at once. The daily canary workflow wrote a perfectly
+// good question and then refused to commit it.
+//
+// So batches are standard-lane only, and a day with no standard-lane question is
+// not a batch at all rather than an empty one that fails.
 const batches = new Map();
 for (const { record } of questionFiles) {
   const day = record?.created_utc?.slice(0, 10);
   if (!day) continue;
+  if ((record.lane ?? 'standard') !== 'standard') continue;
   if (!batches.has(day)) batches.set(day, []);
   batches.get(day).push(record);
 }

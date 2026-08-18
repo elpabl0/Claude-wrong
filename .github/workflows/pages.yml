@@ -4,16 +4,11 @@ name: Publish site
 # wrong.aecs.io. The site is a pure function of the repository: no database, no
 # CMS, nothing that can differ from what is in git.
 
+# Dispatch-only. GitHub Pages is not enabled on this repository and the live
+# site is served by Railway, so running this on every push produced a permanently
+# red workflow that published nothing. Enable Pages in repository settings first
+# if you want this back on a trigger.
 on:
-  push:
-    paths:
-      - 'ledger/**'
-      - 'lib/**'
-      - 'scripts/**'
-      - 'docs/**'
-      - 'config/**'
-      - 'site-static/**'
-      - '.github/workflows/pages.yml'
   workflow_dispatch:
   workflow_call:
 

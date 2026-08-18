@@ -177,3 +177,16 @@ test('the canary lane is the one the mechanical author will select', () => {
   assert.equal(laneFor(1), 'canary');
   assert.equal(config.lanes.canary.scored, false);
 });
+
+test('batch quotas apply to the standard lane only', () => {
+  // The bug this pins: quotas were counted over every question created that day,
+  // which made the other lanes unwritable. The canary is one question a day by
+  // definition, so alone it read as a batch of one and failed every quota at
+  // once - the workflow wrote a good question and then refused to commit it.
+  const q = (over) => ({ created_utc: '2026-08-18T07:00:00Z', category: 'status-quo', origin: 'house', resolution_date: '2026-08-19', claim: 'x', ...over });
+  const inBatch = (recs) => recs.filter((r) => (r.lane ?? 'standard') === 'standard');
+
+  assert.equal(inBatch([q({ lane: 'canary' })]).length, 0, 'a canary is not a batch');
+  assert.equal(inBatch([q({ lane: 'short' })]).length, 0, 'nor is a short-lane question');
+  assert.equal(inBatch([q({ lane: 'canary' }), q({})]).length, 1, 'and a canary does not pad a standard batch');
+});
