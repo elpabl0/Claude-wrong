@@ -1,0 +1,158 @@
+name: Watchdog
+
+# Nothing here watches the market. This watches the WATCHING.
+#
+# The market's monitoring worked: the liveness check reported "not-started" for
+# two days and the daily review fired on schedule and found the problem. Both
+# then wrote their findings somewhere only a human reads, and the only route to
+# anything being fixed ran through that human noticing and relaying it. An
+# unattended system whose escalation path terminates in an inbox is not
+# unattended; it has simply moved the manual step somewhere less visible.
+#
+# So this turns a failure into a GitHub issue - durable, public, attached to the
+# repository, and requiring nobody's attention to come into existence. It is
+# mechanical on purpose: agent-driven routines in this project have never once
+# demonstrably committed anything, while GitHub Actions have committed reliably
+# all week, so the escalation path is built out of the half that works.
+
+on:
+  workflow_run:
+    workflows: ['Clear, resolve and publish', 'Write the daily canary', 'CI', 'Police the market credential']
+    types: [completed]
+  schedule:
+    - cron: '40 16 * * *' # after the day's rounds have closed and cleared
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  failed-run:
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'failure'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const run = context.payload.workflow_run;
+            // One issue per workflow, reopened and appended to rather than a new
+            // issue per failure - a hundred identical issues is the same thing as
+            // no issues, in the same way a permanently red check is no check.
+            const title = `Watchdog: "${run.name}" is failing`;
+            const marker = `<!-- watchdog:${run.name} -->`;
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo,
+              state: 'all', labels: 'watchdog', per_page: 100,
+            });
+            const found = existing.data.find((i) => i.body && i.body.includes(marker));
+            const body = [
+              marker,
+              `**${run.name}** failed on \`${run.head_branch}\` at ${run.updated_at}.`,
+              '',
+              `Run: ${run.html_url}`,
+              `Commit: ${run.head_sha}`,
+              '',
+              'Opened automatically. The market has no route to a human between a job failing and this issue existing, which is the point of it.',
+            ].join('\n');
+
+            if (!found) {
+              await github.rest.issues.create({
+                owner: context.repo.owner, repo: context.repo.repo,
+                title, body, labels: ['watchdog'],
+              });
+              return;
+            }
+            if (found.state === 'closed') {
+              await github.rest.issues.update({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: found.number, state: 'open',
+              });
+            }
+            await github.rest.issues.createComment({
+              owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: found.number,
+              body: `Failed again: ${run.html_url} (${run.head_sha.slice(0, 7)}, ${run.updated_at}).`,
+            });
+
+  stalled-market:
+    if: github.event_name != 'workflow_run'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # Computed from the committed record, not fetched from the site: if the
+      # site itself is down, that is precisely when this must still run.
+      - name: Compute liveness
+        id: live
+        run: |
+          node -e "
+            import('./lib/market.js').then(async (m) => {
+              const { liveness } = await import('./lib/liveness.js');
+              const market = m.loadMarket({});
+              const l = liveness(market);
+              const stalled = l.stalled.map((c) => '- ' + c.label + ': ' + c.detail).join('\n');
+              console.log('state=' + l.state);
+              require('fs').appendFileSync(process.env.GITHUB_OUTPUT,
+                'state=' + l.state + '\n' +
+                'detail<<EOF\n' + (stalled || 'none') + '\nEOF\n');
+            });
+          "
+
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const state = ${{ toJSON(steps.live.outputs.state) }};
+            const detail = ${{ toJSON(steps.live.outputs.detail) }};
+            const marker = '<!-- watchdog:liveness -->';
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo,
+              state: 'all', labels: 'watchdog', per_page: 100,
+            });
+            const found = existing.data.find((i) => i.body && i.body.includes(marker));
+
+            if (state === 'running') {
+              // Close it on recovery, so an open watchdog issue always means
+              // something is wrong right now rather than was wrong once.
+              if (found && found.state === 'open') {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner, repo: context.repo.repo,
+                  issue_number: found.number, body: 'Recovered: liveness is `running` again. Closing.',
+                });
+                await github.rest.issues.update({
+                  owner: context.repo.owner, repo: context.repo.repo,
+                  issue_number: found.number, state: 'closed',
+                });
+              }
+              return;
+            }
+
+            const body = [
+              marker,
+              `Market liveness is \`${state}\` as of ${new Date().toISOString()}.`,
+              '',
+              detail,
+              '',
+              'Computed from the committed record by `lib/liveness.js`, not from the site, so this fires even when the site is down.',
+            ].join('\n');
+
+            if (!found) {
+              await github.rest.issues.create({
+                owner: context.repo.owner, repo: context.repo.repo,
+                title: `Watchdog: market is ${state}`, body, labels: ['watchdog'],
+              });
+              return;
+            }
+            if (found.state === 'closed') {
+              await github.rest.issues.update({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: found.number, state: 'open',
+              });
+            }
+            await github.rest.issues.createComment({
+              owner: context.repo.owner, repo: context.repo.repo,
+              issue_number: found.number, body,
+            });
