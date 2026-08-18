@@ -1,0 +1,56 @@
+{
+  "id": "2026-08-18-california-billionaire-wealth-tax",
+  "created_utc": "2026-08-18T21:00:00Z",
+  "author_model": "claude-opus-5",
+  "protocol_version": 2,
+  "category": "economics-markets",
+  "lane": "standard",
+  "origin": "mirrored",
+  "claim": "California will enact a wealth tax targeting billionaires, as judged by the linked Manifold market.",
+  "resolution_date": "2026-12-31",
+  "resolution_criterion": "Resolves exactly as the linked Manifold market 9nsyLEANnz resolves: YES if that market resolves YES, NO if it resolves NO. The market is read mechanically by the `manifold` resolver; no judgement is applied here and this ledger never reinterprets the source. If the market resolves N/A, is cancelled, or cannot be read for the grace period, this question voids and every stake is returned. The crowd probability recorded below was read from the committed slate at 2026-08-18T21:51:45.646Z, not recalled.",
+  "resolver": {
+    "type": "manifold",
+    "market_id": "9nsyLEANnz"
+  },
+  "rounds": [
+    {
+      "id": "r1",
+      "t_minus_days": 90,
+      "opens_utc": "2026-10-02T09:00:00Z",
+      "closes_utc": "2026-10-02T21:00:00Z"
+    },
+    {
+      "id": "r2",
+      "t_minus_days": 60,
+      "opens_utc": "2026-11-01T09:00:00Z",
+      "closes_utc": "2026-11-01T21:00:00Z"
+    },
+    {
+      "id": "r3",
+      "t_minus_days": 30,
+      "opens_utc": "2026-12-01T09:00:00Z",
+      "closes_utc": "2026-12-01T21:00:00Z"
+    },
+    {
+      "id": "r4",
+      "t_minus_days": 14,
+      "opens_utc": "2026-12-17T09:00:00Z",
+      "closes_utc": "2026-12-17T21:00:00Z"
+    },
+    {
+      "id": "r5",
+      "t_minus_days": 7,
+      "opens_utc": "2026-12-24T09:00:00Z",
+      "closes_utc": "2026-12-24T21:00:00Z"
+    }
+  ],
+  "external_reference": {
+    "platform": "manifold",
+    "question_id": "9nsyLEANnz",
+    "community_probability": 0.3011,
+    "snapshot_utc": "2026-08-18T21:51:45.646Z",
+    "url": "https://manifold.markets/JohnDavidPressman/will-california-billionaires-have-t",
+    "forecaster_count": 439
+  }
+}
