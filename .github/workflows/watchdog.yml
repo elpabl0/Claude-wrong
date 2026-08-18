@@ -102,11 +102,64 @@ jobs:
             });
           "
 
+      # Repository state and SERVED state are different things and can diverge.
+      # Liveness is computed from the committed record, so it reports "running"
+      # the moment a question is merged - while the public site can still be
+      # serving a build from hours earlier because a deploy queued, failed, or the
+      # platform had an outage. Anyone looking at the site sees an empty market
+      # and nothing in the repository disagrees with them. So the age of the
+      # deployed build is checked as its own signal.
+      - name: Check the age of the deployed build
+        id: served
+        run: |
+          set +e
+          BODY=$(curl -s --max-time 20 https://wrong.aecs.io/healthz)
+          if [ -z "$BODY" ]; then
+            echo "age=unreachable" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          AGE=$(printf '%s' "$BODY" | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>{try{process.stdout.write(String(JSON.parse(d).market.built_minutes_ago))}catch(e){process.stdout.write('unknown')}})")
+          echo "age=$AGE" >> "$GITHUB_OUTPUT"
+          echo "Deployed build is $AGE minutes old."
+
       - uses: actions/github-script@v7
         with:
           script: |
             const state = ${{ toJSON(steps.live.outputs.state) }};
             const detail = ${{ toJSON(steps.live.outputs.detail) }};
+            const servedAge = ${{ toJSON(steps.served.outputs.age) }};
+
+            // The site rebuilds on deploy and the mechanical jobs push several
+            // times a day, so a build much older than half a day means deploys
+            // have stopped arriving whatever the repository looks like.
+            const STALE_MINUTES = 720;
+            const ageNum = Number(servedAge);
+            const servedStale = servedAge === 'unreachable' || (Number.isFinite(ageNum) && ageNum > STALE_MINUTES);
+            const servedMarker = '<!-- watchdog:served -->';
+            const all = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo,
+              state: 'all', labels: 'watchdog', per_page: 100,
+            });
+            const servedIssue = all.data.find((i) => i.body && i.body.includes(servedMarker));
+            if (servedStale) {
+              const body = [
+                servedMarker,
+                servedAge === 'unreachable'
+                  ? 'wrong.aecs.io/healthz did not respond.'
+                  : `The deployed site is serving a build ${servedAge} minutes old (threshold ${STALE_MINUTES}).`,
+                '',
+                'The repository can be perfectly healthy while this is true: a queued or failed deploy leaves the public site showing an older market than the one in git, and nothing in the record disagrees with it.',
+              ].join('\n');
+              if (!servedIssue) {
+                await github.rest.issues.create({ owner: context.repo.owner, repo: context.repo.repo, title: 'Watchdog: the deployed site is stale', body, labels: ['watchdog'] });
+              } else {
+                if (servedIssue.state === 'closed') await github.rest.issues.update({ owner: context.repo.owner, repo: context.repo.repo, issue_number: servedIssue.number, state: 'open' });
+                await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: servedIssue.number, body });
+              }
+            } else if (servedIssue && servedIssue.state === 'open') {
+              await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: servedIssue.number, body: `Recovered: deployed build is ${servedAge} minutes old. Closing.` });
+              await github.rest.issues.update({ owner: context.repo.owner, repo: context.repo.repo, issue_number: servedIssue.number, state: 'closed' });
+            }
             const marker = '<!-- watchdog:liveness -->';
             const existing = await github.rest.issues.listForRepo({
               owner: context.repo.owner, repo: context.repo.repo,
