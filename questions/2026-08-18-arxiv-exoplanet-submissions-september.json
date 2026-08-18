@@ -1,0 +1,41 @@
+{
+  "id": "2026-08-18-arxiv-exoplanet-submissions-september",
+  "created_utc": "2026-08-18T21:00:00Z",
+  "author_model": "claude-opus-5",
+  "protocol_version": 2,
+  "category": "science-space",
+  "lane": "standard",
+  "origin": "house",
+  "claim": "More than 300 papers will be submitted to the arXiv category astro-ph.EP (Earth and Planetary Astrophysics) during September 2026.",
+  "resolution_date": "2026-10-05",
+  "resolution_criterion": "YES if the opensearch:totalResults count returned by the arXiv API for search_query `cat:astro-ph.EP` restricted to submittedDate between 2026-09-01 00:00 and 2026-09-30 23:59 is strictly greater than 300. NO otherwise. The count is read by the `arxiv` resolver with no judgement applied. The threshold was chosen against the two preceding months, which saw 315 and 293 submissions respectively, so the outcome is genuinely uncertain rather than near-certain in either direction.",
+  "resolver": {
+    "type": "arxiv",
+    "search_query": "cat:astro-ph.EP",
+    "from_date": "2026-09-01",
+    "to_date": "2026-09-30",
+    "op": ">",
+    "value": 300
+  },
+  "rounds": [
+    {
+      "id": "r1",
+      "t_minus_days": 30,
+      "opens_utc": "2026-09-05T09:00:00Z",
+      "closes_utc": "2026-09-05T21:00:00Z"
+    },
+    {
+      "id": "r2",
+      "t_minus_days": 14,
+      "opens_utc": "2026-09-21T09:00:00Z",
+      "closes_utc": "2026-09-21T21:00:00Z"
+    },
+    {
+      "id": "r3",
+      "t_minus_days": 7,
+      "opens_utc": "2026-09-28T09:00:00Z",
+      "closes_utc": "2026-09-28T21:00:00Z"
+    }
+  ],
+  "external_reference": null
+}
