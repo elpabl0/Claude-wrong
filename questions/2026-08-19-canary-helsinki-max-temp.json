@@ -1,0 +1,28 @@
+{
+  "id": "2026-08-19-canary-helsinki-max-temp",
+  "created_utc": "2026-08-19T07:50:40Z",
+  "author_model": "none - written mechanically by scripts/new-canary.js",
+  "protocol_version": 2,
+  "category": "status-quo",
+  "lane": "canary",
+  "origin": "house",
+  "claim": "The maximum air temperature in Helsinki on 2026-08-19 (UTC day) will be above 19.9°C.",
+  "resolution_date": "2026-08-20",
+  "resolution_criterion": "YES if the value at JSON pointer /daily/temperature_2m_max/0 in the Open-Meteo response for latitude 60.17, longitude 24.94, start_date=2026-08-19, end_date=2026-08-19, timezone=UTC is strictly greater than 19.9. NO otherwise. The threshold was set to the forecast value published for 2026-08-19 at the time of writing, so the honest probability is close to a half. This is a canary: it is unscored and exists to exercise the pipeline daily.",
+  "resolver": {
+    "type": "json",
+    "url": "https://api.open-meteo.com/v1/forecast?latitude=60.17&longitude=24.94&daily=temperature_2m_max&start_date=2026-08-19&end_date=2026-08-19&timezone=UTC",
+    "pointer": "/daily/temperature_2m_max/0",
+    "op": ">",
+    "value": 19.9
+  },
+  "rounds": [
+    {
+      "id": "r1",
+      "t_minus_days": 1,
+      "opens_utc": "2026-08-19T09:00:00Z",
+      "closes_utc": "2026-08-19T15:00:00Z"
+    }
+  ],
+  "external_reference": null
+}
