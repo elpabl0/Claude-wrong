@@ -17,7 +17,7 @@ name: Watchdog
 
 on:
   workflow_run:
-    workflows: ['Clear, resolve and publish', 'Write the daily canary', 'CI', 'Police the market credential']
+    workflows: ['Clear, resolve and publish', 'Write the daily canary', 'Trade the house seats', 'CI', 'Police the market credential']
     types: [completed]
   schedule:
     - cron: '40 16 * * *' # after the day's rounds have closed and cleared
