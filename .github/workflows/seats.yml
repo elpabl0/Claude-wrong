@@ -1,0 +1,53 @@
+name: Trade the house seats
+
+# Seat trading was four agent routines on a timer. Over a week they fired many
+# times and produced not one order: `rounds/` held nothing but its README while a
+# canary round opened and closed with all four firing inside its window. Nothing
+# reported an error, because nothing reported anything.
+#
+# So this moves seat trading to where every reliable commit in this repository
+# has come from. It is the same judgement as the canary: do not build the part
+# that has to be dependable out of the part that has never been observed to work.
+#
+# Runs twice inside the round window - once early, once as a second chance if the
+# first failed - because rounds close and a missed window cannot be reopened.
+
+on:
+  schedule:
+    - cron: '30 10 * * *'
+    - cron: '30 13 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Decide and print without submitting'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: house-seats
+  cancel-in-progress: false
+
+jobs:
+  trade:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Submit orders
+        env:
+          # One secret, four seats: each credential is derived as
+          # HMAC-SHA256(MARKET_SEAT_SECRET, seat_id), so nothing has to be stored
+          # per seat and no credential is ever written down anywhere.
+          MARKET_SEAT_SECRET: ${{ secrets.MARKET_SEAT_SECRET }}
+          # Optional. Without it only canary rounds are traded, at a fixed
+          # near-even price, so the daily pipeline test keeps working with no
+          # dependency on a paid API. Scored questions are never priced by a
+          # fixed rule.
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: node scripts/trade-seats.js ${{ inputs.dry_run && '--dry-run' || '' }}
