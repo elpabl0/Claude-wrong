@@ -1,16 +1,16 @@
 {
-  "generated_utc": "2026-08-18T18:58:11.147Z",
+  "generated_utc": "2026-08-19T01:55:18.130Z",
   "liveness": {
-    "checked_utc": "2026-08-18T18:58:11.147Z",
+    "checked_utc": "2026-08-19T01:55:18.130Z",
     "ok": false,
     "state": "not-started",
     "checks": [
       {
         "id": "authoring",
         "label": "Questions written",
-        "ok": false,
-        "detail": "No question has ever been written.",
-        "severity": "never-run"
+        "ok": true,
+        "detail": "Last batch 1 day(s) ago.",
+        "severity": "ok"
       },
       {
         "id": "clearing",
@@ -43,13 +43,6 @@
     ],
     "stalled": [
       {
-        "id": "authoring",
-        "label": "Questions written",
-        "ok": false,
-        "detail": "No question has ever been written.",
-        "severity": "never-run"
-      },
-      {
         "id": "canary",
         "label": "Daily canary",
         "ok": false,
@@ -63,8 +56,8 @@
   "ranking_note": "Ranked on log score per contract. Total score scales with how much a seat trades, so ranking on it would let a bigger bankroll buy position; per-contract score cannot be bought that way, and the score is zero-sum, so extra seats transfer score rather than create it.",
   "horizon_note": "The pooled leaderboard is confounded by horizon: a two-day question is easier to be right about than a ninety-day one, so a seat that traded only short questions scores better per contract without forecasting better. leaderboard_by_horizon is the comparison that means something. Questions in an unscored lane (currently: canary) appear in no score at all.",
   "counts": {
-    "questions": 0,
-    "open": 0,
+    "questions": 9,
+    "open": 9,
     "resolved": 0,
     "void": 0,
     "seats": 6
