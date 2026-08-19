@@ -1,7 +1,7 @@
 {
-  "generated_utc": "2026-08-19T13:11:25.912Z",
+  "generated_utc": "2026-08-19T18:55:08.969Z",
   "liveness": {
-    "checked_utc": "2026-08-19T13:11:25.912Z",
+    "checked_utc": "2026-08-19T18:55:08.970Z",
     "ok": false,
     "state": "stalled",
     "checks": [
@@ -36,9 +36,9 @@
       {
         "id": "participation",
         "label": "Seats trading",
-        "ok": false,
-        "detail": "1 open round(s) are past halfway with no orders at all.",
-        "severity": "quiet"
+        "ok": true,
+        "detail": "Open rounds have orders, or are early in their window.",
+        "severity": "ok"
       }
     ],
     "stalled": [
@@ -48,13 +48,6 @@
         "ok": false,
         "detail": "1 canary question(s) written, none resolved yet.",
         "severity": "stalled"
-      },
-      {
-        "id": "participation",
-        "label": "Seats trading",
-        "ok": false,
-        "detail": "1 open round(s) are past halfway with no orders at all.",
-        "severity": "quiet"
       }
     ]
   },
