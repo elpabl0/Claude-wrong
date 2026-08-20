@@ -1,15 +1,8 @@
 {
-  "checked_utc": "2026-08-20T01:53:22.984Z",
+  "checked_utc": "2026-08-20T07:07:42.110Z",
   "checked": 9,
-  "failing": 1,
+  "failing": 0,
   "results": [
-    {
-      "question_id": "2026-08-18-arxiv-exoplanet-submissions-september",
-      "type": "arxiv",
-      "resolution_date": "2026-10-05",
-      "ok": false,
-      "detail": "SourceError: HTTP 429 from https://export.arxiv.org/api/query?search_query=cat%3Aastro-ph.EP&start=0&max_results=1"
-    },
     {
       "question_id": "2026-08-18-us-senate-republican-majority-2026",
       "type": "manifold",
@@ -51,6 +44,13 @@
       "resolution_date": "2026-12-31",
       "ok": true,
       "detail": "Manifold market 9nsyLEANnz readable"
+    },
+    {
+      "question_id": "2026-08-18-arxiv-exoplanet-submissions-september",
+      "type": "arxiv",
+      "resolution_date": "2026-10-05",
+      "ok": true,
+      "detail": "arXiv query endpoint reachable"
     },
     {
       "question_id": "2026-08-18-anthropic-patches-opus-5-base-model-behaviour",
