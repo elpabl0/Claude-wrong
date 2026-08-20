@@ -1,14 +1,14 @@
 {
-  "checked_utc": "2026-08-19T18:55:08.916Z",
-  "checked": 10,
-  "failing": 0,
+  "checked_utc": "2026-08-20T01:53:22.984Z",
+  "checked": 9,
+  "failing": 1,
   "results": [
     {
-      "question_id": "2026-08-19-canary-helsinki-max-temp",
-      "type": "json",
-      "resolution_date": "2026-08-20",
-      "ok": true,
-      "detail": "https://api.open-meteo.com/v1/forecast?latitude=60.17&longitude=24.94&daily=temperature_2m_max&start_date=2026-08-19&end_date=2026-08-19&timezone=UTC reachable and /daily/temperature_2m_max/0 present"
+      "question_id": "2026-08-18-arxiv-exoplanet-submissions-september",
+      "type": "arxiv",
+      "resolution_date": "2026-10-05",
+      "ok": false,
+      "detail": "SourceError: HTTP 429 from https://export.arxiv.org/api/query?search_query=cat%3Aastro-ph.EP&start=0&max_results=1"
     },
     {
       "question_id": "2026-08-18-us-senate-republican-majority-2026",
@@ -51,13 +51,6 @@
       "resolution_date": "2026-12-31",
       "ok": true,
       "detail": "Manifold market 9nsyLEANnz readable"
-    },
-    {
-      "question_id": "2026-08-18-arxiv-exoplanet-submissions-september",
-      "type": "arxiv",
-      "resolution_date": "2026-10-05",
-      "ok": true,
-      "detail": "arXiv query endpoint reachable"
     },
     {
       "question_id": "2026-08-18-anthropic-patches-opus-5-base-model-behaviour",

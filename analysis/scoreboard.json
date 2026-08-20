@@ -1,15 +1,15 @@
 {
-  "generated_utc": "2026-08-19T18:55:08.969Z",
+  "generated_utc": "2026-08-20T01:53:23.039Z",
   "liveness": {
-    "checked_utc": "2026-08-19T18:55:08.970Z",
-    "ok": false,
-    "state": "stalled",
+    "checked_utc": "2026-08-20T01:53:23.039Z",
+    "ok": true,
+    "state": "running",
     "checks": [
       {
         "id": "authoring",
         "label": "Questions written",
         "ok": true,
-        "detail": "Last batch 1 day(s) ago.",
+        "detail": "Last batch 2 day(s) ago.",
         "severity": "ok"
       },
       {
@@ -29,9 +29,9 @@
       {
         "id": "canary",
         "label": "Daily canary",
-        "ok": false,
-        "detail": "1 canary question(s) written, none resolved yet.",
-        "severity": "stalled"
+        "ok": true,
+        "detail": "Last canary resolved 0 day(s) ago; the full path works end to end.",
+        "severity": "ok"
       },
       {
         "id": "participation",
@@ -41,15 +41,7 @@
         "severity": "ok"
       }
     ],
-    "stalled": [
-      {
-        "id": "canary",
-        "label": "Daily canary",
-        "ok": false,
-        "detail": "1 canary question(s) written, none resolved yet.",
-        "severity": "stalled"
-      }
-    ]
+    "stalled": []
   },
   "protocol_version": 2,
   "ranked_by": "log_score_per_contract",
@@ -57,12 +49,14 @@
   "horizon_note": "The pooled leaderboard is confounded by horizon: a two-day question is easier to be right about than a ninety-day one, so a seat that traded only short questions scores better per contract without forecasting better. leaderboard_by_horizon is the comparison that means something. Questions in an unscored lane (currently: canary) appear in no score at all.",
   "counts": {
     "questions": 10,
-    "open": 10,
-    "resolved": 0,
+    "open": 9,
+    "resolved": 1,
     "void": 0,
     "seats": 6
   },
-  "settled_question_ids": [],
+  "settled_question_ids": [
+    "2026-08-19-canary-helsinki-max-temp"
+  ],
   "leaderboard": [],
   "leaderboard_by_horizon": [
     {
