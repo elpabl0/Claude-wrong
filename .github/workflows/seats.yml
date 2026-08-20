@@ -39,6 +39,21 @@ jobs:
         with:
           node-version: '22'
 
+      # Fails with the remediation in the run summary rather than buried in a
+      # log tail. A job that fails for a knowable, fixable reason should say what
+      # the fix is at the point of failure - otherwise the watchdog raises an
+      # issue that only says "this is failing", and someone has to go digging to
+      # learn it needed one secret.
+      - name: Check configuration
+        run: |
+          if [ -z "${{ secrets.MARKET_SEAT_SECRET }}" ]; then
+            echo "::error title=MARKET_SEAT_SECRET is not set::The house seats cannot trade without it. Generate one with 'openssl rand -hex 32' and add it under Settings -> Secrets and variables -> Actions. Each seat's credential is derived from it, so this is the only secret needed. Until it is set the canary round cannot clear, because clearing requires two distinct seats."
+            exit 1
+          fi
+          if [ -z "${{ secrets.ANTHROPIC_API_KEY }}" ]; then
+            echo "::warning title=ANTHROPIC_API_KEY is not set::Trading canary rounds only, at a fixed near-even price. Scored questions are deliberately left alone - a mechanical number presented as a forecast would corrupt the record."
+          fi
+
       - name: Submit orders
         env:
           # One secret, four seats: each credential is derived as
