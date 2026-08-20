@@ -1,9 +1,9 @@
 {
-  "generated_utc": "2026-08-20T13:12:33.749Z",
+  "generated_utc": "2026-08-20T19:01:39.807Z",
   "liveness": {
-    "checked_utc": "2026-08-20T13:12:33.749Z",
-    "ok": false,
-    "state": "stalled",
+    "checked_utc": "2026-08-20T19:01:39.807Z",
+    "ok": true,
+    "state": "running",
     "checks": [
       {
         "id": "authoring",
@@ -36,20 +36,12 @@
       {
         "id": "participation",
         "label": "Seats trading",
-        "ok": false,
-        "detail": "1 open round(s) are past halfway with no orders at all.",
-        "severity": "quiet"
+        "ok": true,
+        "detail": "Open rounds have orders, or are early in their window.",
+        "severity": "ok"
       }
     ],
-    "stalled": [
-      {
-        "id": "participation",
-        "label": "Seats trading",
-        "ok": false,
-        "detail": "1 open round(s) are past halfway with no orders at all.",
-        "severity": "quiet"
-      }
-    ]
+    "stalled": []
   },
   "protocol_version": 2,
   "ranked_by": "log_score_per_contract",
