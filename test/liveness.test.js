@@ -146,3 +146,55 @@ test('every check reports an id, a label and a human-readable detail', () => {
     assert.ok(c.label && c.detail, `${c.id} must explain itself: a check nobody can read is a check nobody acts on`);
   }
 });
+
+/** A canary whose round has closed, with a clearing outcome. */
+const clearedCanary = (day, cleared, reason = null) => ({
+  lane: 'canary',
+  question: { id: `canary-${day}`, created_utc: `2026-08-${day}T07:00:00.000Z` },
+  resolution: { resolved_utc: `2026-08-${day}T23:00:00.000Z` },
+  clearings: [{ closed_utc: `2026-08-${day}T15:00:00.000Z`, cleared, reason }],
+});
+
+test('a canary that resolves but never clears is a stall, not a healthy market', () => {
+  // The failure this exists for: everything around the canary looks fine - the
+  // question is written, the round runs, the source is read, an outcome is
+  // recorded - and no price was ever discovered, which is the only thing the
+  // market is for.
+  const none = liveness(healthy({
+    questions: [authored('2026-08-30T00:00:00.000Z'),
+      clearedCanary('19', false, '0 distinct seat(s) submitted; 2 required to clear'),
+      clearedCanary('20', false, '0 distinct seat(s) submitted; 2 required to clear')],
+  }), { now: NOW });
+  assert.equal(check(none, 'canary_clears').ok, false);
+  assert.equal(none.state, 'stalled');
+  assert.match(check(none, 'canary_clears').detail, /2 required to clear/, 'the notice carries the clearing engine’s own reason');
+});
+
+test('the canary-clears check does not depend on when it is sampled', () => {
+  // The participation check can only fail while a round is open, and the daily
+  // watchdog samples after the window shuts - so it closed the stalled-market
+  // issue as recovered every day while no canary had ever cleared. This check
+  // reads closed rounds, so the hour it runs at cannot change its answer.
+  const market = healthy({
+    questions: [authored('2026-08-30T00:00:00.000Z'), clearedCanary('19', false, 'no seats')],
+    openRounds: [],
+  });
+  for (const hour of ['T02:00:00.000Z', 'T12:00:00.000Z', 'T16:40:00.000Z', 'T23:00:00.000Z']) {
+    const r = liveness(market, { now: new Date(`2026-09-01${hour}`) });
+    assert.equal(check(r, 'canary_clears').ok, false, `should still fail at ${hour}`);
+  }
+});
+
+test('one clear in the recent window is enough to call it working', () => {
+  const r = liveness(healthy({
+    questions: [authored('2026-08-30T00:00:00.000Z'),
+      clearedCanary('19', false, 'no seats'), clearedCanary('20', true), clearedCanary('21', false, 'no seats')],
+  }), { now: NOW });
+  assert.equal(check(r, 'canary_clears').ok, true, 'an occasional miss is not a broken market');
+  assert.match(check(r, 'canary_clears').detail, /1 of the last 3/);
+});
+
+test('no closed canary round yet means the check stays silent rather than failing', () => {
+  const r = liveness(healthy(), { now: NOW });
+  assert.equal(check(r, 'canary_clears'), undefined, 'nothing to say before the first round closes');
+});
