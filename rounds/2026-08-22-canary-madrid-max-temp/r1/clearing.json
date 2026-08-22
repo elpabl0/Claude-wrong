@@ -1,0 +1,17 @@
+{
+  "question_id": "2026-08-22-canary-madrid-max-temp",
+  "round_id": "r1",
+  "closed_utc": "2026-08-22T15:00:00Z",
+  "cleared_utc": "2026-08-22T18:50:03.750Z",
+  "seal_mode": "open-book",
+  "prior_price": 0.5,
+  "commitments": 0,
+  "verified": 0,
+  "rejected": [],
+  "protocol_version": 2,
+  "cleared": false,
+  "reason": "0 distinct seat(s) submitted; 2 required to clear",
+  "carried_price": 0.5,
+  "orders": 0,
+  "book": []
+}
