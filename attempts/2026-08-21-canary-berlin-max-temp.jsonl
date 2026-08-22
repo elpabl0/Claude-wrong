@@ -1,0 +1,1 @@
+{"utc":"2026-08-22T01:52:05.108Z","outcome":"yes","detail":"https://api.open-meteo.com/v1/forecast?latitude=52.52&longitude=13.41&daily=temperature_2m_max&start_date=2026-08-21&end_date=2026-08-21&timezone=UTC → /daily/temperature_2m_max/0 = 25.1; criterion was > 24.7 → YES"}
