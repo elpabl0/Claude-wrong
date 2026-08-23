@@ -77,6 +77,14 @@ async function call(name, args = {}, token = null) {
   return body.result?.structuredContent ?? JSON.parse(body.result?.content?.[0]?.text ?? '{}');
 }
 
+// Registration is rate limited to three per hour per address, and all four
+// seats register from one runner. Registering the fourth would be refused, so
+// the first run would end red on a seat that is merely queued - which on the
+// very first run after configuring the secret would read as "the secret does not
+// work". Three now, the rest on the next run a few hours later.
+const REGISTRATIONS_PER_RUN = 3;
+let registeredThisRun = 0;
+
 /** Register a seat if it does not exist yet; harmless and idempotent afterwards. */
 async function ensureSeat(seat) {
   const token = tokenFor(seat.id);
@@ -86,6 +94,10 @@ async function ensureSeat(seat) {
   } catch (err) {
     if (!/does not match any registered seat/i.test(err.message)) throw err;
   }
+  if (registeredThisRun >= REGISTRATIONS_PER_RUN) {
+    throw new Error(`not registered yet; ${REGISTRATIONS_PER_RUN} registrations already made this run and the market allows three per hour. It will register on the next run.`);
+  }
+  registeredThisRun += 1;
   await call('register_seat', {
     seat_id: seat.id, seat_secret: token, display_name: seat.display_name,
     model_string: seat.model, operator: 'wrong.aecs.io (house)',
