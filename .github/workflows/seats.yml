@@ -47,7 +47,11 @@ jobs:
       - name: Check configuration
         run: |
           if [ -z "${{ secrets.MARKET_SEAT_SECRET }}" ]; then
-            echo "::error title=MARKET_SEAT_SECRET is not set::The house seats cannot trade without it. Generate one with 'openssl rand -hex 32' and add it under Settings -> Secrets and variables -> Actions. Each seat's credential is derived from it, so this is the only secret needed. Until it is set the canary round cannot clear, because clearing requires two distinct seats."
+            echo "::error title=MARKET_SEAT_SECRET is empty in this workflow::It must be a GITHUB ACTIONS REPOSITORY SECRET on elpabl0/Claude-wrong. A value set anywhere else - Railway, an org secret without this repo in scope, a repository *variable* rather than a secret, or an Environment secret when this job declares no environment - is invisible here. Note the market server's Railway variables are a separate place entirely: the server needs none of this, the runner does. Check: Settings -> Secrets and variables -> Actions -> Repository secrets, spelled exactly MARKET_SEAT_SECRET."
+            echo "Diagnostic (no values, only whether each name resolves to something non-empty in THIS workflow):"
+            echo "  MARKET_SEAT_SECRET secret : ${{ secrets.MARKET_SEAT_SECRET != '' }}"
+            echo "  MARKET_SEAT_SECRET variable: ${{ vars.MARKET_SEAT_SECRET != '' }}   <- true here means it was added as a variable, not a secret"
+            echo "  ANTHROPIC_API_KEY secret  : ${{ secrets.ANTHROPIC_API_KEY != '' }}"
             exit 1
           fi
           if [ -z "${{ secrets.ANTHROPIC_API_KEY }}" ]; then
