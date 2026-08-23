@@ -1,8 +1,15 @@
 {
-  "checked_utc": "2026-08-23T07:02:44.773Z",
-  "checked": 9,
+  "checked_utc": "2026-08-23T13:03:56.746Z",
+  "checked": 10,
   "failing": 0,
   "results": [
+    {
+      "question_id": "2026-08-23-canary-warsaw-max-temp",
+      "type": "json",
+      "resolution_date": "2026-08-24",
+      "ok": true,
+      "detail": "https://api.open-meteo.com/v1/forecast?latitude=52.23&longitude=21.01&daily=temperature_2m_max&start_date=2026-08-23&end_date=2026-08-23&timezone=UTC reachable and /daily/temperature_2m_max/0 present"
+    },
     {
       "question_id": "2026-08-18-us-senate-republican-majority-2026",
       "type": "manifold",
