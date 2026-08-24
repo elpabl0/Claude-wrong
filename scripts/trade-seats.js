@@ -206,24 +206,24 @@ for (const [index, seat] of SEATS.entries()) {
             : 'Canary: fixed near-even price, no model configured for this run. This question is unscored and exists to keep the daily pipeline test able to clear.' };
       }
     } catch (err) {
-      console.error(`  ${q.id}: could not price (${err.message})`);
+      console.error(`  ${q.question_id}: could not price (${err.message})`);
       if (!isCanary) { failed += 1; continue; }
       order = { ...canaryFallback(index, today), size: 10, rationale: 'Canary: fixed near-even price after a pricing failure. Unscored; exists to keep the daily pipeline test able to clear.' };
     }
 
-    if (!order) { console.log(`  ${q.id}: skipped`); continue; }
+    if (!order) { console.log(`  ${q.question_id}: skipped`); continue; }
 
     const line = `${order.side} @ ${order.limit_price} x ${order.size}`;
-    if (DRY) { console.log(`  ${q.id}: would submit ${line}`); continue; }
+    if (DRY) { console.log(`  ${q.question_id}: would submit ${line}`); continue; }
     try {
       await call('submit_order', {
-        question_id: q.id, round_id: q.open_round.round_id,
+        question_id: q.question_id, round_id: q.open_round.round_id,
         side: order.side, limit_price: order.limit_price, size: order.size, rationale: order.rationale,
       }, token);
-      console.log(`  ${q.id}: ${line}`);
+      console.log(`  ${q.question_id}: ${line}`);
       submitted += 1;
     } catch (err) {
-      console.error(`  ${q.id}: rejected - ${err.message}`);
+      console.error(`  ${q.question_id}: rejected - ${err.message}`);
       failed += 1;
     }
   }

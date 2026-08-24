@@ -156,7 +156,7 @@ let submitted = 0;
 
 for (const q of questions) {
   const round = q.open_round;
-  console.log(`\n${q.id} (${q.lane ?? 'standard'} lane, ${round.round_id})\n  ${q.claim}`);
+  console.log(`\n${q.question_id} (${q.lane ?? 'standard'} lane, ${round.round_id})\n  ${q.claim}`);
 
   let order;
   try {
@@ -180,7 +180,7 @@ for (const q of questions) {
 
   try {
     const out = await callTool('submit_order', {
-      question_id: q.id,
+      question_id: q.question_id,
       round_id: round.round_id,
       side: order.side,
       limit_price: order.limit_price,

@@ -431,3 +431,23 @@ test('a seat registered since the last deploy can trade immediately', async () =
   assert.equal((await store.getJson('seats/newbie.json')).id, 'newbie');
   assert.ok((await store.listDir('seats')).some((e) => e.name === 'newbie.json'));
 });
+
+test('the question shape a client codes against is part of the contract', async () => {
+  // Two field mismatches between this server and its own house trader went
+  // unnoticed for days because nothing asserted the wire shape: the trader read
+  // `q.id` when the field is `question_id`, so every order it built carried
+  // question_id: undefined; and it read `q.lane`, which the server did not send
+  // at all, so a canary looked like a standard question and the no-model
+  // fallback traded nothing. Both are contract breaks, not client bugs.
+  const { handle } = harness();
+  const list = parse(await call(handle, 'list_open_questions', { only_open_rounds: true }));
+  assert.ok(list.questions.length, 'fixture must have an open round for this to test anything');
+
+  for (const q of list.questions) {
+    for (const field of ['question_id', 'claim', 'resolution_date', 'resolution_criterion', 'current_price', 'lane', 'scored', 'open_round']) {
+      assert.ok(q[field] !== undefined, `list_open_questions must expose \`${field}\` - clients build orders from it`);
+    }
+    assert.ok(q.open_round.round_id, 'an open round must carry its round_id');
+    assert.equal(q.id, undefined, 'there is no `id` field; the name is question_id, and a client reading `id` gets undefined silently');
+  }
+});
