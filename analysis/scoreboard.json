@@ -1,7 +1,7 @@
 {
-  "generated_utc": "2026-08-25T13:13:01.233Z",
+  "generated_utc": "2026-08-25T18:59:16.794Z",
   "liveness": {
-    "checked_utc": "2026-08-25T13:13:01.233Z",
+    "checked_utc": "2026-08-25T18:59:16.794Z",
     "ok": false,
     "state": "stalled",
     "checks": [
@@ -43,9 +43,9 @@
       {
         "id": "participation",
         "label": "Seats trading",
-        "ok": false,
-        "detail": "1 open round(s) are past halfway with no orders at all.",
-        "severity": "quiet"
+        "ok": true,
+        "detail": "Open rounds have orders, or are early in their window.",
+        "severity": "ok"
       }
     ],
     "stalled": [
@@ -55,13 +55,6 @@
         "ok": false,
         "detail": "None of the last 3 canary round(s) cleared: 0 distinct seat(s) submitted; 2 required to clear. A canary that resolves but never clears looks healthy from every other angle while discovering no price at all.",
         "severity": "stalled"
-      },
-      {
-        "id": "participation",
-        "label": "Seats trading",
-        "ok": false,
-        "detail": "1 open round(s) are past halfway with no orders at all.",
-        "severity": "quiet"
       }
     ]
   },
