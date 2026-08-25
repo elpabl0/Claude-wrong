@@ -1,8 +1,15 @@
 {
-  "checked_utc": "2026-08-25T07:10:16.917Z",
-  "checked": 9,
+  "checked_utc": "2026-08-25T13:13:01.191Z",
+  "checked": 10,
   "failing": 0,
   "results": [
+    {
+      "question_id": "2026-08-25-canary-dublin-max-temp",
+      "type": "json",
+      "resolution_date": "2026-08-26",
+      "ok": true,
+      "detail": "https://api.open-meteo.com/v1/forecast?latitude=53.35&longitude=-6.26&daily=temperature_2m_max&start_date=2026-08-25&end_date=2026-08-25&timezone=UTC reachable and /daily/temperature_2m_max/0 present"
+    },
     {
       "question_id": "2026-08-18-us-senate-republican-majority-2026",
       "type": "manifold",
