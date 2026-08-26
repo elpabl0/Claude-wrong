@@ -1,5 +1,5 @@
 {
-  "checked_utc": "2026-08-26T02:00:17.291Z",
+  "checked_utc": "2026-08-26T07:11:36.044Z",
   "checked": 9,
   "failing": 1,
   "results": [
@@ -8,7 +8,7 @@
       "type": "arxiv",
       "resolution_date": "2026-10-05",
       "ok": false,
-      "detail": "SourceError: HTTP 429 from https://export.arxiv.org/api/query?search_query=cat%3Aastro-ph.EP&start=0&max_results=1"
+      "detail": "SourceError: request to https://export.arxiv.org/api/query?search_query=cat%3Aastro-ph.EP&start=0&max_results=1 failed: This operation was aborted"
     },
     {
       "question_id": "2026-08-18-us-senate-republican-majority-2026",
