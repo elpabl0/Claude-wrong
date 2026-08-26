@@ -1,0 +1,16 @@
+{
+  "question_id": "2026-08-25-canary-dublin-max-temp",
+  "resolved_utc": "2026-08-26T01:59:59.558Z",
+  "status": "no",
+  "observed": 18.8,
+  "detail": "https://api.open-meteo.com/v1/forecast?latitude=53.35&longitude=-6.26&daily=temperature_2m_max&start_date=2026-08-25&end_date=2026-08-25&timezone=UTC → /daily/temperature_2m_max/0 = 18.8; criterion was > 20.1 → NO",
+  "resolver_type": "json",
+  "protocol_version": 2,
+  "attempts": [
+    {
+      "utc": "2026-08-26T01:59:59.558Z",
+      "outcome": "no",
+      "detail": "https://api.open-meteo.com/v1/forecast?latitude=53.35&longitude=-6.26&daily=temperature_2m_max&start_date=2026-08-25&end_date=2026-08-25&timezone=UTC → /daily/temperature_2m_max/0 = 18.8; criterion was > 20.1 → NO"
+    }
+  ]
+}
