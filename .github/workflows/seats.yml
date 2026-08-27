@@ -13,9 +13,14 @@ name: Trade the house seats
 # first failed - because rounds close and a missed window cannot be reopened.
 
 on:
+  # Spread across the window for the same reason the canary is: scheduled runs
+  # drift, and a round that shuts at 15:00 cannot be reopened. Submitting twice
+  # is harmless - the per-seat-per-round cap is enforced from the committed
+  # record - so extra attempts cost nothing and cover a late or skipped slot.
   schedule:
-    - cron: '30 10 * * *'
-    - cron: '30 13 * * *'
+    - cron: '23 10 * * *'
+    - cron: '23 12 * * *'
+    - cron: '23 14 * * *'
   workflow_dispatch:
     inputs:
       dry_run:
