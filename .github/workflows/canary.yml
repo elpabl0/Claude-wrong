@@ -18,9 +18,22 @@ name: Write the daily canary
 # one thing the canary exists to distinguish. scripts/new-canary.js refuses to
 # write in that case rather than publishing an untradeable question.
 
+# Three attempts, not one. GitHub's scheduled runs are best-effort and drift
+# badly under load - the clearing job, scheduled at :17 past every sixth hour,
+# has been observed firing at 09:52, two and a half hours late. A canary has a
+# hard deadline: the round it creates opens at 09:00 and shuts at 15:00, and
+# scripts/new-canary.js refuses to write one whose window has already closed,
+# because an untradeable question is worse than a missing one.
+#
+# So a single slot with no margin loses the whole day, which is exactly what
+# happened on 27 August. The script exits successfully if today's canary already
+# exists - one a day, and a second is not better than one - so later attempts are
+# free no-ops and only the first to actually run does anything.
 on:
   schedule:
-    - cron: '10 7 * * *' # 07:10 UTC, ~2h before the round opens
+    - cron: '7 4 * * *'
+    - cron: '7 6 * * *'
+    - cron: '7 8 * * *'
   workflow_dispatch:
 
 permissions:
