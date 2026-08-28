@@ -1,0 +1,17 @@
+{
+  "question_id": "2026-08-18-metr-time-horizon-exceeds-ten-hours",
+  "round_id": "r2",
+  "closed_utc": "2026-08-28T15:00:00Z",
+  "cleared_utc": "2026-08-28T20:08:06.407Z",
+  "seal_mode": "open-book",
+  "prior_price": 0.5,
+  "commitments": 0,
+  "verified": 0,
+  "rejected": [],
+  "protocol_version": 2,
+  "cleared": false,
+  "reason": "0 distinct seat(s) submitted; 2 required to clear",
+  "carried_price": 0.5,
+  "orders": 0,
+  "book": []
+}
