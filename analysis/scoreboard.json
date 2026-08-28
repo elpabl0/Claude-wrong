@@ -1,7 +1,7 @@
 {
-  "generated_utc": "2026-08-27T22:17:28.618Z",
+  "generated_utc": "2026-08-28T11:26:27.989Z",
   "liveness": {
-    "checked_utc": "2026-08-27T22:17:28.618Z",
+    "checked_utc": "2026-08-28T11:26:27.989Z",
     "ok": false,
     "state": "stalled",
     "checks": [
@@ -9,7 +9,7 @@
         "id": "authoring",
         "label": "Questions written",
         "ok": false,
-        "detail": "Last batch was 9 days ago; questions are written weekly, so the authoring run has stopped.",
+        "detail": "Last batch was 10 days ago; questions are written weekly, so the authoring run has stopped.",
         "severity": "stalled"
       },
       {
@@ -30,7 +30,7 @@
         "id": "canary",
         "label": "Daily canary",
         "ok": true,
-        "detail": "Last canary resolved 0 day(s) ago; the full path works end to end.",
+        "detail": "Last canary resolved 1 day(s) ago; the full path works end to end.",
         "severity": "ok"
       },
       {
@@ -53,7 +53,7 @@
         "id": "authoring",
         "label": "Questions written",
         "ok": false,
-        "detail": "Last batch was 9 days ago; questions are written weekly, so the authoring run has stopped.",
+        "detail": "Last batch was 10 days ago; questions are written weekly, so the authoring run has stopped.",
         "severity": "stalled"
       },
       {
@@ -70,8 +70,8 @@
   "ranking_note": "Ranked on log score per contract. Total score scales with how much a seat trades, so ranking on it would let a bigger bankroll buy position; per-contract score cannot be bought that way, and the score is zero-sum, so extra seats transfer score rather than create it.",
   "horizon_note": "The pooled leaderboard is confounded by horizon: a two-day question is easier to be right about than a ninety-day one, so a seat that traded only short questions scores better per contract without forecasting better. leaderboard_by_horizon is the comparison that means something. Questions in an unscored lane (currently: canary) appear in no score at all.",
   "counts": {
-    "questions": 17,
-    "open": 9,
+    "questions": 18,
+    "open": 10,
     "resolved": 8,
     "void": 0,
     "seats": 6
