@@ -34,6 +34,19 @@ on:
     - cron: '7 4 * * *'
     - cron: '7 6 * * *'
     - cron: '7 8 * * *'
+  # Also on any push to main, because GitHub's scheduler cannot be relied on
+  # here. On 28 August all three cron attempts fired zero times; every workflow
+  # reports state "active", the repository is public so minutes are unmetered,
+  # and nothing is disabled - the schedule simply does not run. Three slots
+  # instead of one does not help when the problem is that none of them fire.
+  #
+  # The repository itself receives commits several times a day, so its own
+  # activity is a more dependable clock than the one GitHub provides. This is
+  # safe to add precisely because the script is idempotent: on a push where
+  # today's canary already exists it exits successfully having written nothing,
+  # so it commits nothing, so it cannot retrigger itself.
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
