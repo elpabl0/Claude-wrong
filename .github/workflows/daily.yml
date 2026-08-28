@@ -8,9 +8,21 @@ name: Clear, resolve and publish
 # It runs several times a day because round windows close on their own schedule
 # and a book that has closed should be published promptly.
 
+# Also on pushes to main. This job was left on a schedule alone because it
+# commits on every run, so a naive push trigger would retrigger itself for ever.
+# But GitHub's scheduler has been firing perhaps twice a day against a six-hourly
+# cron, and on 28 August four closed rounds sat unclear for five hours because
+# of it - a round that has closed and not cleared is the market failing to
+# produce the one thing it exists to produce.
+#
+# The loop is broken by skipping pushes this job itself authored. Its commits
+# are made as "wrong.aecs.io resolver", so its own push is ignored while a
+# canary's, a merge's or anyone else's still starts a clearing pass.
 on:
   schedule:
     - cron: '17 */6 * * *' # every six hours
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       probe:
@@ -29,6 +41,8 @@ concurrency:
 
 jobs:
   resolve:
+    # The loop guard. Without it this job's own commit would start it again.
+    if: github.event_name != 'push' || github.event.head_commit.author.name != 'wrong.aecs.io resolver'
     runs-on: ubuntu-latest
     outputs:
       changed: ${{ steps.commit.outputs.changed }}
