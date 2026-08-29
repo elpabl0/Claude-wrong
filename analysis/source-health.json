@@ -1,8 +1,36 @@
 {
-  "checked_utc": "2026-08-29T07:06:49.160Z",
-  "checked": 9,
+  "checked_utc": "2026-08-29T15:26:58.236Z",
+  "checked": 13,
   "failing": 0,
   "results": [
+    {
+      "question_id": "2026-08-29-canary-madrid-max-temp",
+      "type": "json",
+      "resolution_date": "2026-08-30",
+      "ok": true,
+      "detail": "https://api.open-meteo.com/v1/forecast?latitude=40.42&longitude=-3.7&daily=temperature_2m_max&start_date=2026-08-29&end_date=2026-08-29&timezone=UTC reachable and /daily/temperature_2m_max/0 present"
+    },
+    {
+      "question_id": "2026-08-29-chicago-max-temp-sep-8",
+      "type": "json",
+      "resolution_date": "2026-09-08",
+      "ok": true,
+      "detail": "https://api.open-meteo.com/v1/forecast?latitude=41.88&longitude=-87.63&daily=temperature_2m_max&start_date=2026-09-08&end_date=2026-09-08&timezone=UTC reachable and /daily/temperature_2m_max/0 present"
+    },
+    {
+      "question_id": "2026-08-29-arxiv-rl-submissions-week",
+      "type": "arxiv",
+      "resolution_date": "2026-09-10",
+      "ok": true,
+      "detail": "arXiv query endpoint reachable"
+    },
+    {
+      "question_id": "2026-08-29-arxiv-llm-submissions-week",
+      "type": "arxiv",
+      "resolution_date": "2026-09-10",
+      "ok": true,
+      "detail": "arXiv query endpoint reachable"
+    },
     {
       "question_id": "2026-08-18-us-senate-republican-majority-2026",
       "type": "manifold",
