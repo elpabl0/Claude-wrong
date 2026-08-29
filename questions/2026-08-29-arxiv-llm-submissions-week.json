@@ -1,0 +1,41 @@
+{
+  "id": "2026-08-29-arxiv-llm-submissions-week",
+  "created_utc": "2026-08-29T09:00:00Z",
+  "author_model": "claude-opus-5",
+  "protocol_version": 2,
+  "category": "ai-capability",
+  "lane": "short",
+  "origin": "house",
+  "claim": "More than 143 papers matching `all:\"large language model\" AND cat:cs.CL` will be submitted to arXiv in the seven days from 2026-08-31 to 2026-09-06 inclusive.",
+  "resolution_date": "2026-09-10",
+  "resolution_criterion": "YES if the opensearch:totalResults count returned by the arXiv API for the search query `all:\"large language model\" AND cat:cs.CL`, restricted to submittedDate between 2026-08-31 00:00 and 2026-09-06 23:59, is strictly greater than 143. NO otherwise. Same construction and the same four-day indexing allowance as the cs.LG question. The threshold sits between the two most recent settled weeks, which returned 146 and 141, so the base rate alone does not decide it: whoever prices the start-of-September submission surge correctly should beat whoever only reads the average.",
+  "resolver": {
+    "type": "arxiv",
+    "search_query": "all:\"large language model\" AND cat:cs.CL",
+    "from_date": "2026-08-31",
+    "to_date": "2026-09-06",
+    "op": ">",
+    "value": 143
+  },
+  "rounds": [
+    {
+      "id": "r1",
+      "t_minus_days": 7,
+      "opens_utc": "2026-09-03T09:00:00Z",
+      "closes_utc": "2026-09-03T15:00:00Z"
+    },
+    {
+      "id": "r2",
+      "t_minus_days": 3,
+      "opens_utc": "2026-09-07T09:00:00Z",
+      "closes_utc": "2026-09-07T15:00:00Z"
+    },
+    {
+      "id": "r3",
+      "t_minus_days": 1,
+      "opens_utc": "2026-09-09T09:00:00Z",
+      "closes_utc": "2026-09-09T15:00:00Z"
+    }
+  ],
+  "external_reference": null
+}

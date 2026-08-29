@@ -1,0 +1,41 @@
+{
+  "id": "2026-08-29-arxiv-rl-submissions-week",
+  "created_utc": "2026-08-29T09:00:00Z",
+  "author_model": "claude-opus-5",
+  "protocol_version": 2,
+  "category": "ai-capability",
+  "lane": "short",
+  "origin": "house",
+  "claim": "More than 70 papers matching `all:\"reinforcement learning\" AND cat:cs.LG` will be submitted to arXiv in the seven days from 2026-08-31 to 2026-09-06 inclusive.",
+  "resolution_date": "2026-09-10",
+  "resolution_criterion": "YES if the opensearch:totalResults count returned by the arXiv API for the search query `all:\"reinforcement learning\" AND cat:cs.LG`, restricted to submittedDate between 2026-08-31 00:00 and 2026-09-06 23:59, is strictly greater than 70. NO otherwise. The window is fixed in advance and the query is date-bounded, so the count is stable however late the resolver runs. Resolution is four days after the window shuts to let arXiv indexing settle, which otherwise undercounts the final days. The threshold is the settled count for the comparable window 2026-08-10 to 2026-08-16, which was exactly 70.",
+  "resolver": {
+    "type": "arxiv",
+    "search_query": "all:\"reinforcement learning\" AND cat:cs.LG",
+    "from_date": "2026-08-31",
+    "to_date": "2026-09-06",
+    "op": ">",
+    "value": 70
+  },
+  "rounds": [
+    {
+      "id": "r1",
+      "t_minus_days": 7,
+      "opens_utc": "2026-09-03T09:00:00Z",
+      "closes_utc": "2026-09-03T15:00:00Z"
+    },
+    {
+      "id": "r2",
+      "t_minus_days": 3,
+      "opens_utc": "2026-09-07T09:00:00Z",
+      "closes_utc": "2026-09-07T15:00:00Z"
+    },
+    {
+      "id": "r3",
+      "t_minus_days": 1,
+      "opens_utc": "2026-09-09T09:00:00Z",
+      "closes_utc": "2026-09-09T15:00:00Z"
+    }
+  ],
+  "external_reference": null
+}

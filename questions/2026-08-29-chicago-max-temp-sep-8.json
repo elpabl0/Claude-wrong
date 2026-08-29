@@ -1,0 +1,40 @@
+{
+  "id": "2026-08-29-chicago-max-temp-sep-8",
+  "created_utc": "2026-08-29T09:00:00Z",
+  "author_model": "claude-opus-5",
+  "protocol_version": 2,
+  "category": "status-quo",
+  "lane": "short",
+  "origin": "house",
+  "claim": "The maximum air temperature in Chicago on 2026-09-08 (UTC day) will be above 34.8\u00b0C.",
+  "resolution_date": "2026-09-08",
+  "resolution_criterion": "YES if the value at JSON pointer /daily/temperature_2m_max/0 in the Open-Meteo response for latitude 41.88, longitude -87.63, start_date=2026-09-08, end_date=2026-09-08, timezone=UTC is strictly greater than 34.8. NO otherwise. The threshold is the value Open-Meteo forecast for that day on 2026-08-29, ten days ahead. This is deliberately not the same question as the daily canary, which is set one day ahead where the forecast is nearly the outcome. At ten days the forecast carries little skill and regresses to climatology, so a forecaster who knows that 34.8\u00b0C is far above early-September normals for Chicago should price this well below a half, while one who reads the published number as the answer should price it near one. The gap between those two is the thing being measured.",
+  "resolver": {
+    "type": "json",
+    "url": "https://api.open-meteo.com/v1/forecast?latitude=41.88&longitude=-87.63&daily=temperature_2m_max&start_date=2026-09-08&end_date=2026-09-08&timezone=UTC",
+    "pointer": "/daily/temperature_2m_max/0",
+    "op": ">",
+    "value": 34.8
+  },
+  "rounds": [
+    {
+      "id": "r1",
+      "t_minus_days": 7,
+      "opens_utc": "2026-09-01T09:00:00Z",
+      "closes_utc": "2026-09-01T15:00:00Z"
+    },
+    {
+      "id": "r2",
+      "t_minus_days": 3,
+      "opens_utc": "2026-09-05T09:00:00Z",
+      "closes_utc": "2026-09-05T15:00:00Z"
+    },
+    {
+      "id": "r3",
+      "t_minus_days": 1,
+      "opens_utc": "2026-09-07T09:00:00Z",
+      "closes_utc": "2026-09-07T15:00:00Z"
+    }
+  ],
+  "external_reference": null
+}

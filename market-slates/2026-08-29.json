@@ -1,0 +1,473 @@
+{
+  "batch": "2026-08-29",
+  "fetched_utc": "2026-08-29T15:23:01.005Z",
+  "sources": {
+    "metaculus": {
+      "ok": false,
+      "endpoint": null,
+      "scanned": 0,
+      "usable": 0,
+      "error": "https://www.metaculus.com/api/posts/?statuses=open&forecast_type=binary&limit=100&order_by=-hotness: HTTP 403 from https://www.metaculus.com/api/posts/?statuses=open&forecast_type=binary&limit=100&order_by=-hotness; https://www.metaculus.com/api/posts/?statuses=open&limit=100&order_by=-hotness: HTTP 403 from https://www.metaculus.com/api/posts/?statuses=open&limit=100&order_by=-hotness; https://www.metaculus.com/api2/questions/?status=open&type=forecast&limit=100&order_by=-activity: HTTP 403 from https://www.metaculus.com/api2/questions/?status=open&type=forecast&limit=100&order_by=-activity"
+    },
+    "manifold": {
+      "ok": true,
+      "endpoint": "https://api.manifold.markets/v0/search-markets?term=&sort=liquidity&filter=open&contractType=BINARY&limit=250 + https://api.manifold.markets/v0/search-markets?term=&sort=most-popular&filter=open&contractType=BINARY&limit=250 + https://api.manifold.markets/v0/search-markets?term=&sort=close-date&filter=open&contractType=BINARY&limit=250",
+      "scanned": 675,
+      "usable": 74,
+      "error": null
+    }
+  },
+  "note": "Community probabilities are recorded here as fetched. A mirrored prediction must cite one of these question_ids and reproduce its community_probability and this fetched_utc exactly; scripts/validate.js enforces that.",
+  "questions": [
+    {
+      "platform": "manifold",
+      "question_id": "iU1U8knE9NP5Pmtrotui",
+      "title": "Imu will be stronger than Blackbeard AND the final villain of One Piece",
+      "url": "https://manifold.markets/JaredAsh/imu-will-be-stronger-than-blackbear",
+      "community_probability": 0.3416,
+      "forecaster_count": 173,
+      "volume": 20712,
+      "scheduled_close": "2026-10-03",
+      "horizon_days": 35,
+      "resolver": {
+        "type": "manifold",
+        "market_id": "iU1U8knE9NP5Pmtrotui"
+      }
+    },
+    {
+      "platform": "manifold",
+      "question_id": "zIjFL4cxLmRUbeRKdgCh",
+      "title": "🇧🇷 President in Jan 2027 is Lula, or whoever he endorses / Lula ou seu indicado é presidente em janeiro de 2027",
+      "url": "https://manifold.markets/BrunoParga/-2026-winner-is-lula-or-whoever-he",
+      "community_probability": 0.5824,
+      "forecaster_count": 94,
+      "volume": 94063,
+      "scheduled_close": "2026-10-03",
+      "horizon_days": 35,
+      "resolver": {
+        "type": "manifold",
+        "market_id": "zIjFL4cxLmRUbeRKdgCh"
+      }
+    },
+    {
+      "platform": "manifold",
+      "question_id": "biXq0Tl6I185ivohSgoV",
+      "title": "Will Kizaru betray/defect the Marines?",
+      "url": "https://manifold.markets/BoxFangWP/will-kizaru-betraydefect-the-marine",
+      "community_probability": 0.7907,
+      "forecaster_count": 936,
+      "volume": 178389,
+      "scheduled_close": "2026-10-31",
+      "horizon_days": 63,
+      "resolver": {
+        "type": "manifold",
+        "market_id": "biXq0Tl6I185ivohSgoV"
+      }
+    },
+    {
+      "platform": "manifold",
+      "question_id": "Bn76fB9rYXMkHsbCs9kZ",
+      "title": "If Trump wins, will marijuana be federally rescheduled before the 2026 midterms?",
+      "url": "https://manifold.markets/BlueDragon/if-trump-wins-will-marijuana-be-fed",
+      "community_probability": 0.2326,
+      "forecaster_count": 212,
+      "volume": 117944,
+      "scheduled_close": "2026-11-03",
+      "horizon_days": 66,
+      "resolver": {
+        "type": "manifold",
+        "market_id": "Bn76fB9rYXMkHsbCs9kZ"
+      }
+    },
+    {
+      "platform": "manifold",
+      "question_id": "rP0gSkoCniNTeQmDagJU",
+      "title": "If Trump is elected, will there be a ceasefire in Ukraine before the 2026 midterms?",
+      "url": "https://manifold.markets/Arky/if-trump-is-elected-will-there-be-a-40ca39e5dcec",
+      "community_probability": 0.0751,
+      "forecaster_count": 605,
+      "volume": 343438,
+      "scheduled_close": "2026-11-04",
+      "horizon_days": 67,
+      "resolver": {
+        "type": "manifold",
+        "market_id": "rP0gSkoCniNTeQmDagJU"
+      }
+    },
+    {
+      "platform": "manifold",
+      "question_id": "uISNlAqC2E",
+      "title": "Republicans have a House majority after 2026 midterms?",
+      "url": "https://manifold.markets/ryanmccomb/republicans-have-house-majority-aft",
+      "community_probability": 0.1168,
+      "forecaster_count": 556,
+      "volume": 479872,
+      "scheduled_close": "2026-11-04",
+      "horizon_days": 67,
+      "resolver": {
+        "type": "manifold",
+        "market_id": "uISNlAqC2E"
+      }
+    },
+    {
+      "platform": "manifold",
+      "question_id": "SyhgEZC68s",
+      "title": "Will the Democrats win the 2026 Texas Senate Election?",
+      "url": "https://manifold.markets/Jack1/will-the-democrats-win-the-2026-tex",
+      "community_probability": 0.4969,
+      "forecaster_count": 286,
+      "volume": 194953,
+      "scheduled_close": "2026-11-04",
+      "horizon_days": 67,
+      "resolver": {
+        "type": "manifold",
+        "market_id": "SyhgEZC68s"
+      }
+    },
+    {
+      "platform": "manifold",
+      "question_id": "BpoEJNtlQoDBpfjBmK0y",
+      "title": "Will Republicans win the Senate in the 2026 elections?",
+      "url": "https://manifold.markets/AndrewG/will-republicans-win-the-senate-in-738388924521",
+      "community_probability": 0.4906,
+      "forecaster_count": 397,
+      "volume": 143763,
+      "scheduled_close": "2026-12-01",
+      "horizon_days": 94,
+      "resolver": {
+        "type": "manifold",
+        "market_id": "BpoEJNtlQoDBpfjBmK0y"
+      }
+    },
+    {
+      "platform": "manifold",
+      "question_id": "2lZdlsyUPh",
+      "title": "Will Democrats control both the House and the Senate after the 2026 midterms?",
+      "url": "https://manifold.markets/deleted007/will-democrats-control-both-the-hou-h5pyQIsQOU",
+      "community_probability": 0.4945,
+      "forecaster_count": 309,
+      "volume": 228591,
+      "scheduled_close": "2026-12-01",
+      "horizon_days": 94,
+      "resolver": {
+        "type": "manifold",
+        "market_id": "2lZdlsyUPh"
+      }
+    },
+    {
+      "platform": "manifold",
+      "question_id": "RiB3ECnJ48CXPeRVKKu7",
+      "title": "Will Ukraine win the Russo-Ukrainian War?",
+      "url": "https://manifold.markets/chrisjbillington/will-ukraine-win-the-russoukrainian",
+      "community_probability": 0.3467,
+      "forecaster_count": 639,
+      "volume": 273023,
+      "scheduled_close": "2026-12-31",
+      "horizon_days": 124,
+      "resolver": {
+        "type": "manifold",
+        "market_id": "RiB3ECnJ48CXPeRVKKu7"
+      }
+    },
+    {
+      "platform": "manifold",
+      "question_id": "I6gU82zcus",
+      "title": "Tesla has more fully autonomous rides than Waymo in 2026?",
+      "url": "https://manifold.markets/JamesGrugett/tesla-serves-more-fully-autonomous",
+      "community_probability": 0.0548,
+      "forecaster_count": 558,
+      "volume": 1032795,
+      "scheduled_close": "2026-12-31",
+      "horizon_days": 124,
+      "resolver": {
+        "type": "manifold",
+        "market_id": "I6gU82zcus"
+      }
+    },
+    {
+      "platform": "manifold",
+      "question_id": "9nsyLEANnz",
+      "title": "Will the California billionaire wealth tax pass?",
+      "url": "https://manifold.markets/JohnDavidPressman/will-california-billionaires-have-t",
+      "community_probability": 0.2852,
+      "forecaster_count": 439,
+      "volume": 276294,
+      "scheduled_close": "2026-12-31",
+      "horizon_days": 124,
+      "resolver": {
+        "type": "manifold",
+        "market_id": "9nsyLEANnz"
+      }
+    },
+    {
+      "platform": "manifold",
+      "question_id": "ZZLRuEZpZl",
+      "title": "Will Venezuelans be better off at the end of 2026?",
+      "url": "https://manifold.markets/Gabrielle/will-venezuelans-be-better-off-at-t",
+      "community_probability": 0.1561,
+      "forecaster_count": 417,
+      "volume": 230572,
+      "scheduled_close": "2026-12-31",
+      "horizon_days": 124,
+      "resolver": {
+        "type": "manifold",
+        "market_id": "ZZLRuEZpZl"
+      }
+    },
+    {
+      "platform": "manifold",
+      "question_id": "puLqZusPqU",
+      "title": "Will the AI bubble pop in 2026?",
+      "url": "https://manifold.markets/256/will-the-ai-bubble-pop-in-2026",
+      "community_probability": 0.07,
+      "forecaster_count": 402,
+      "volume": 136392,
+      "scheduled_close": "2026-12-31",
+      "horizon_days": 124,
+      "resolver": {
+        "type": "manifold",
+        "market_id": "puLqZusPqU"
+      }
+    },
+    {
+      "platform": "manifold",
+      "question_id": "9qO6y9sEId",
+      "title": "[ACX 2026] Will an AI-created song chart in the top 20 of the Billboard Hot 100 before 2027?",
+      "url": "https://manifold.markets/DaftPunkRock/acx-2026-will-an-aicreated-song-cha",
+      "community_probability": 0.1837,
+      "forecaster_count": 394,
+      "volume": 268143,
+      "scheduled_close": "2026-12-31",
+      "horizon_days": 124,
+      "resolver": {
+        "type": "manifold",
+        "market_id": "9qO6y9sEId"
+      }
+    },
+    {
+      "platform": "manifold",
+      "question_id": "9OgZp6uC95",
+      "title": "\"AI 2027\" report's predictions borne out by 2027?",
+      "url": "https://manifold.markets/IsaacKing/ai-2027-reports-predictions-borne-o",
+      "community_probability": 0.1607,
+      "forecaster_count": 244,
+      "volume": 125080,
+      "scheduled_close": "2026-12-31",
+      "horizon_days": 124,
+      "resolver": {
+        "type": "manifold",
+        "market_id": "9OgZp6uC95"
+      }
+    },
+    {
+      "platform": "manifold",
+      "question_id": "RqZ5ltIL2t",
+      "title": "Will the U.S. deploy 1000 ground troops in Iran in 2026?",
+      "url": "https://manifold.markets/bens/will-the-us-deploy-1000-ground-troo",
+      "community_probability": 0.0951,
+      "forecaster_count": 227,
+      "volume": 89750,
+      "scheduled_close": "2026-12-31",
+      "horizon_days": 124,
+      "resolver": {
+        "type": "manifold",
+        "market_id": "RqZ5ltIL2t"
+      }
+    },
+    {
+      "platform": "manifold",
+      "question_id": "9qxuM0rVznCVGHQtSSum",
+      "title": "Apple to release a foldable iPhone before 2027?",
+      "url": "https://manifold.markets/Quadrifold/apple-to-release-a-foldable-iphone",
+      "community_probability": 0.8184,
+      "forecaster_count": 220,
+      "volume": 58916,
+      "scheduled_close": "2026-12-31",
+      "horizon_days": 124,
+      "resolver": {
+        "type": "manifold",
+        "market_id": "9qxuM0rVznCVGHQtSSum"
+      }
+    },
+    {
+      "platform": "manifold",
+      "question_id": "bWy57GWuo2ZHVWwDOivh",
+      "title": "Will GPT5 show clear signs of diminishing returns?",
+      "url": "https://manifold.markets/LarsDoucet/will-gpt5-show-clear-signs-of-dimin",
+      "community_probability": 0.5452,
+      "forecaster_count": 261,
+      "volume": 27628,
+      "scheduled_close": "2027-01-01",
+      "horizon_days": 125,
+      "resolver": {
+        "type": "manifold",
+        "market_id": "bWy57GWuo2ZHVWwDOivh"
+      }
+    },
+    {
+      "platform": "manifold",
+      "question_id": "q2CZUhn500",
+      "title": "Will the US invade Iran before the end of 2026?",
+      "url": "https://manifold.markets/cash/will-the-us-invade-iran-before-the-zs06u6hptc",
+      "community_probability": 0.1035,
+      "forecaster_count": 253,
+      "volume": 102854,
+      "scheduled_close": "2027-01-01",
+      "horizon_days": 125,
+      "resolver": {
+        "type": "manifold",
+        "market_id": "q2CZUhn500"
+      }
+    },
+    {
+      "platform": "manifold",
+      "question_id": "nYuj0Id6fkUInnQV4fzV",
+      "title": "Will AI porn videos be better than real porn by the end of 2026?",
+      "url": "https://manifold.markets/JonathanRay/will-ai-porn-videos-be-better-than",
+      "community_probability": 0.4562,
+      "forecaster_count": 213,
+      "volume": 62167,
+      "scheduled_close": "2027-01-01",
+      "horizon_days": 125,
+      "resolver": {
+        "type": "manifold",
+        "market_id": "nYuj0Id6fkUInnQV4fzV"
+      }
+    },
+    {
+      "platform": "manifold",
+      "question_id": "nT45xPG1nTtRk549xjnU",
+      "title": "Will any nuclear weapon be detonated in 2026?",
+      "url": "https://manifold.markets/IsaacKing/will-any-nuclear-weapon-be-detonate-602fc87e774f",
+      "community_probability": 0.0804,
+      "forecaster_count": 211,
+      "volume": 36238,
+      "scheduled_close": "2027-01-01",
+      "horizon_days": 125,
+      "resolver": {
+        "type": "manifold",
+        "market_id": "nT45xPG1nTtRk549xjnU"
+      }
+    },
+    {
+      "platform": "manifold",
+      "question_id": "IzcdZu8uHQtzqNETcY6j",
+      "title": "Will artificial superintelligence exist by 2030?  [resolves N/A in 2027]",
+      "url": "https://manifold.markets/EliezerYudkowsky/will-artificial-superintelligence-e",
+      "community_probability": 0.2162,
+      "forecaster_count": 346,
+      "volume": 106291,
+      "scheduled_close": "2027-01-02",
+      "horizon_days": 126,
+      "resolver": {
+        "type": "manifold",
+        "market_id": "IzcdZu8uHQtzqNETcY6j"
+      }
+    },
+    {
+      "platform": "manifold",
+      "question_id": "i95HLfK9N6hu5H7orfNj",
+      "title": "Will AI wipe out humanity by 2030? [resolves N/A in 2027]",
+      "url": "https://manifold.markets/EliezerYudkowsky/will-ai-wipe-out-humanity-by-2030-r",
+      "community_probability": 0.1149,
+      "forecaster_count": 328,
+      "volume": 860090,
+      "scheduled_close": "2027-01-02",
+      "horizon_days": 126,
+      "resolver": {
+        "type": "manifold",
+        "market_id": "i95HLfK9N6hu5H7orfNj"
+      }
+    },
+    {
+      "platform": "manifold",
+      "question_id": "5M2I0YYBYCstkwDI3yDK",
+      "title": "Will OpenAI pay scientific publishers for content by EOY 2025?",
+      "url": "https://manifold.markets/EliezerYudkowsky/will-openai-pay-scientific-publishe",
+      "community_probability": 0.0716,
+      "forecaster_count": 304,
+      "volume": 77766,
+      "scheduled_close": "2027-01-02",
+      "horizon_days": 126,
+      "resolver": {
+        "type": "manifold",
+        "market_id": "5M2I0YYBYCstkwDI3yDK"
+      }
+    },
+    {
+      "platform": "manifold",
+      "question_id": "xXSR7YFm8DpakUSOXxn0",
+      "title": "Will Benjamin Netanyahu cease to be Prime Minister of Israel before the Israel–Hamas war ends?",
+      "url": "https://manifold.markets/chrisjbillington/will-benjamin-netanyahu-cease-to-be",
+      "community_probability": 0.5637,
+      "forecaster_count": 287,
+      "volume": 44586,
+      "scheduled_close": "2027-01-07",
+      "horizon_days": 131,
+      "resolver": {
+        "type": "manifold",
+        "market_id": "xXSR7YFm8DpakUSOXxn0"
+      }
+    },
+    {
+      "platform": "manifold",
+      "question_id": "Hb1ObYB1ONHzFFNLacMR",
+      "title": "By the end of 2026, will we have transparency into any useful internal pattern within a Large Language Model whose semantics would have been unfamiliar to AI and cognitive science in 2006?",
+      "url": "https://manifold.markets/EliezerYudkowsky/by-the-end-of-2026-will-we-have-tra",
+      "community_probability": 0.0999,
+      "forecaster_count": 835,
+      "volume": 519171,
+      "scheduled_close": "2027-02-01",
+      "horizon_days": 156,
+      "resolver": {
+        "type": "manifold",
+        "market_id": "Hb1ObYB1ONHzFFNLacMR"
+      }
+    },
+    {
+      "platform": "manifold",
+      "question_id": "QpEIX5tQfN5ZODbMztoB",
+      "title": "If Trump wins, will the US enter a recession [WARNING: as measured by Sahm rule] before 2027?",
+      "url": "https://manifold.markets/PeterF/if-trump-wins-will-the-us-enter-a-r",
+      "community_probability": 0.12,
+      "forecaster_count": 219,
+      "volume": 107722,
+      "scheduled_close": "2027-02-02",
+      "horizon_days": 157,
+      "resolver": {
+        "type": "manifold",
+        "market_id": "QpEIX5tQfN5ZODbMztoB"
+      }
+    },
+    {
+      "platform": "manifold",
+      "question_id": "8poB8YIlb9QOlkRacyC7",
+      "title": "Will the Kenya Universal Basic Income experiment find that UBI significantly reduces local crime?",
+      "url": "https://manifold.markets/DismalScientist/will-the-kenya-universal-basic-inco-594702ae779e",
+      "community_probability": 0.6954,
+      "forecaster_count": 372,
+      "volume": 32372,
+      "scheduled_close": "2027-05-31",
+      "horizon_days": 275,
+      "resolver": {
+        "type": "manifold",
+        "market_id": "8poB8YIlb9QOlkRacyC7"
+      }
+    },
+    {
+      "platform": "manifold",
+      "question_id": "SB6hntpOtCyMxgJntJLP",
+      "title": "Will there be 10 new effective altruist billionaires in the next 5 years?",
+      "url": "https://manifold.markets/DwarkeshPatel/will-there-be-10-new-effective-altr",
+      "community_probability": 0.2476,
+      "forecaster_count": 245,
+      "volume": 49138,
+      "scheduled_close": "2027-07-01",
+      "horizon_days": 306,
+      "resolver": {
+        "type": "manifold",
+        "market_id": "SB6hntpOtCyMxgJntJLP"
+      }
+    }
+  ]
+}
