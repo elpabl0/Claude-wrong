@@ -34,11 +34,31 @@ const toStdout = process.argv.includes('--stdout');
 
 const maxDays = config.scoring.horizon_buckets[config.scoring.horizon_buckets.length - 1].max_days;
 
+// The floor is the shortest horizon any lane will accept, read from the lane
+// definitions rather than written here, so the two cannot drift apart.
+//
+// It used to be a hardcoded 7, which quietly made the short lane impossible to
+// mirror into: a mirrored question must match a committed slate, the short lane
+// runs from 2 to 14 days, and nothing under 7 could ever reach a slate. The
+// authoring instructions meanwhile name Manifold markets closing within the
+// fortnight as a good short-lane source. Those two facts contradicted each
+// other for as long as both existed, and the contradiction was invisible
+// because no short-lane question had ever been mirrored to fail.
+//
+// Canaries are excluded: they are unscored, written mechanically from a weather
+// forecast, and never mirrored from anything.
+const minDays = Math.min(
+  ...Object.entries(config.lanes)
+    .filter(([id]) => !id.startsWith('_'))
+    .filter(([id]) => id !== 'canary')
+    .map(([, lane]) => lane.horizon_days[0]),
+);
+
 /** Shared admissibility rules, whichever platform a question came from. */
 function admissible({ close, crowd }) {
   if (!close) return false;
   const horizon = daysBetween(batch, close);
-  if (horizon < 7 || horizon > maxDays) return false;
+  if (horizon < minDays || horizon > maxDays) return false;
   // A market already pinned to a near-certainty is not a test of judgement.
   return crowd !== null && crowd >= 0.05 && crowd <= 0.95;
 }
@@ -101,9 +121,23 @@ async function fetchMetaculus() {
 // is trading. Searching by liquidity and popularity instead gets the markets
 // that actually have a crowd behind them - which is the entire point of using
 // one as a benchmark. The plain listing stays as a fallback.
-const MANIFOLD_SEARCHES = ['liquidity', 'most-popular', 'close-date'].map(
-  (sort) => `https://api.manifold.markets/v0/search-markets?term=&sort=${sort}&filter=open&contractType=BINARY&limit=250`,
-);
+const MANIFOLD_SEARCHES = [
+  ...['liquidity', 'most-popular', 'close-date'].map(
+    (sort) => `https://api.manifold.markets/v0/search-markets?term=&sort=${sort}&filter=open&contractType=BINARY&limit=250`,
+  ),
+  // Soon-closing markets, fetched explicitly.
+  //
+  // The three sorts above are all taken over `filter=open`, and in practice
+  // they return almost nothing that closes inside a month - the 2026-08-29
+  // slate had a minimum horizon of 35 days across all thirty entries. Sorting
+  // by close date does not fix it, because the deep, well-traded markets those
+  // sorts favour are mostly long-dated by nature.
+  //
+  // So ask for the near ones directly. This is the query that found a WTI crude
+  // market at 0.53 closing twelve days out, which is exactly the short-lane
+  // reference the slate is supposed to supply and could not.
+  'https://api.manifold.markets/v0/search-markets?term=&sort=liquidity&filter=closing-month&contractType=BINARY&limit=250',
+];
 const MANIFOLD_FALLBACK = 'https://api.manifold.markets/v0/markets?limit=1000';
 
 /** A market nobody is trading is not a crowd. */
@@ -189,7 +223,23 @@ for (const q of all) {
   if (!buckets.has(key)) buckets.set(key, []);
   buckets.get(key).push(q);
 }
-for (const list of buckets.values()) list.sort((a, b) => (b.forecaster_count ?? 0) - (a.forecaster_count ?? 0));
+// Rank by crowd depth weighted by how undecided that crowd is.
+//
+// Depth alone was the old rule, and for the short lane it selected exactly the
+// wrong markets: of the ten soon-closing candidates it picked, not one sat
+// between 0.25 and 0.75 - they were all near-certainties at 0.05 to 0.14. That
+// is what a deep market closing in three days usually is, because the thing has
+// effectively already happened.
+//
+// A mirror is worth having as a benchmark in proportion to how much genuine
+// disagreement it represents. A market at 0.10 with five hundred forecasters is
+// a question everybody agrees on; one at 0.52 with sixty is a real test, and it
+// is the second that tells you whether a model can forecast. The weight is 1 at
+// even odds and falls linearly to 0 at certainty, so depth still decides
+// between markets of similar uncertainty and never selects a thin crowd on its
+// own.
+const weight = (q) => (q.forecaster_count ?? 0) * (1 - 2 * Math.abs(q.community_probability - 0.5));
+for (const list of buckets.values()) list.sort((a, b) => weight(b) - weight(a));
 
 const picked = [];
 const lists = [...buckets.values()];
