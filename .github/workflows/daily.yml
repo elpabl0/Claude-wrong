@@ -8,16 +8,17 @@ name: Clear, resolve and publish
 # It runs several times a day because round windows close on their own schedule
 # and a book that has closed should be published promptly.
 
-# Also on pushes to main. This job was left on a schedule alone because it
-# commits on every run, so a naive push trigger would retrigger itself for ever.
-# But GitHub's scheduler has been firing perhaps twice a day against a six-hourly
-# cron, and on 28 August four closed rounds sat unclear for five hours because
-# of it - a round that has closed and not cleared is the market failing to
-# produce the one thing it exists to produce.
+# Also on pushes to main, with the loop guarded by skipping pushes this job
+# itself authored - its commits are made as "wrong.aecs.io resolver".
 #
-# The loop is broken by skipping pushes this job itself authored. Its commits
-# are made as "wrong.aecs.io resolver", so its own push is ignored while a
-# canary's, a merge's or anyone else's still starts a clearing pass.
+# That guard was never needed. A push made with GITHUB_TOKEN does not create a
+# workflow run, and every commit here is made with GITHUB_TOKEN, so this job's
+# own push could not have retriggered it however it was written. The guard is
+# correct and costs nothing, so it stays; but it is worth recording that the
+# danger it was built against was imaginary while the benefit the trigger was
+# added for - a more dependable clock than GitHub's scheduler - was mostly
+# imaginary too. Both were reasoned about carefully and neither was checked
+# against what the platform actually does.
 on:
   schedule:
     - cron: '17 */6 * * *' # every six hours
@@ -34,6 +35,8 @@ permissions:
   contents: write
   pages: write
   id-token: write
+  # To dispatch seats.yml at the end of the run.
+  actions: write
 
 concurrency:
   group: ledger-write
@@ -107,6 +110,17 @@ jobs:
 
       - name: Verify history is still append-only
         run: node scripts/verify-integrity.js
+
+      # This job has just closed every round whose window expired, which means
+      # the rounds still open are exactly the ones seats can still trade. It is
+      # also, right now, a runner that is demonstrably alive - which is more than
+      # can be said for the cron slots seats.yml is otherwise waiting on.
+      #
+      # seats.yml dispatches nothing in turn, so this cannot loop back here.
+      - name: Ask the seats to trade whatever is still open
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run seats.yml --ref main || true
 
 # The site is served by Railway, which redeploys from main on its own. GitHub
 # Pages was an alternative publishing path that was never enabled on this

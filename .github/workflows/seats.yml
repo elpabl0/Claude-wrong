@@ -17,12 +17,17 @@ on:
   # drift, and a round that shuts at 15:00 cannot be reopened. Submitting twice
   # is harmless - the per-seat-per-round cap is enforced from the committed
   # record - so extra attempts cost nothing and cover a late or skipped slot.
-  # On any push to main as well - GitHub's scheduled runs have been firing at a
-  # small fraction of their schedule, and a round that shuts at 15:00 cannot be
-  # reopened. The repository's own commit traffic is the more reliable clock.
+  # On any push to main as well, though that trigger does less than it was meant
+  # to: a push made with GITHUB_TOKEN creates no workflow run, so the repository's
+  # own commit traffic - which is all GITHUB_TOKEN - does not reach this job. What
+  # does reach it is the workflow_dispatch at the end of canary.yml and daily.yml,
+  # which GitHub delivers even when GITHUB_TOKEN raises it. Those two jobs know
+  # when a round has just opened or is still open, so being called by them is
+  # better targeted than any clock.
+  #
   # Trading twice is harmless: the per-seat-per-round cap is enforced from the
-  # committed record, not from how many times a job happened to run, and this
-  # job never commits, so it cannot retrigger itself.
+  # committed record, not from how many times a job happened to run, and this job
+  # never commits, so it cannot retrigger itself or anything else.
   push:
     branches: [main]
   schedule:

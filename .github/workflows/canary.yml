@@ -34,23 +34,28 @@ on:
     - cron: '7 4 * * *'
     - cron: '7 6 * * *'
     - cron: '7 8 * * *'
-  # Also on any push to main, because GitHub's scheduler cannot be relied on
-  # here. On 28 August all three cron attempts fired zero times; every workflow
-  # reports state "active", the repository is public so minutes are unmetered,
-  # and nothing is disabled - the schedule simply does not run. Three slots
-  # instead of one does not help when the problem is that none of them fire.
+  # Also on any push to main. This is worth less than it looks: a push made with
+  # GITHUB_TOKEN does not create a workflow run, and every mechanical commit in
+  # this repository is made with GITHUB_TOKEN. So in the day after this trigger
+  # was added, four bot commits landed on main and started nothing at all; the
+  # only push runs on main were the two commits pushed by hand. The clock I
+  # reached for turned out not to tick.
   #
-  # The repository itself receives commits several times a day, so its own
-  # activity is a more dependable clock than the one GitHub provides. This is
-  # safe to add precisely because the script is idempotent: on a push where
-  # today's canary already exists it exits successfully having written nothing,
-  # so it commits nothing, so it cannot retrigger itself.
+  # It stays because it is free and it does work for pushes by a person or a
+  # PAT, and because the script is idempotent: on a push where today's canary
+  # already exists it exits successfully having written nothing, so it commits
+  # nothing, so it cannot retrigger itself. The mechanism that actually carries
+  # the schedule forward is the dispatch at the end of this job.
   push:
     branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: write
+  # To dispatch seats.yml below. workflow_dispatch is the one event GitHub does
+  # deliver when GITHUB_TOKEN raises it, which is what makes that step work
+  # where the push trigger above does not.
+  actions: write
 
 concurrency:
   group: ledger-write
@@ -94,3 +99,26 @@ jobs:
 
       - name: Verify history is still append-only
         run: node scripts/verify-integrity.js
+
+      # Hand the baton to the seat job.
+      #
+      # This is the part that makes the daily cycle self-propagating rather than
+      # four independent bets on GitHub's scheduler. The canary has just opened a
+      # round that shuts at 15:00, and seats.yml has its own three cron slots
+      # inside that window which have been firing at perhaps a third of their
+      # schedule. Rather than hope one of them lands, the job that knows a round
+      # is open says so.
+      #
+      # It runs even when no canary was written, because a round left over from
+      # an earlier day may still be open and this is the one moment we know a
+      # runner is alive. seats.yml commits nothing and dispatches nothing, so the
+      # chain is one link long and cannot loop.
+      #
+      # `|| true` because failing to hand off is not a reason to call a
+      # successfully written canary a failure - and a red canary job is the
+      # signal that the market's daily heartbeat has stopped, which is far too
+      # important to spend on this.
+      - name: Ask the seats to trade the round this just opened
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run seats.yml --ref main || true
