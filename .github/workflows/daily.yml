@@ -81,10 +81,25 @@ jobs:
             echo "MARKET_SEAL_PRIVATE_KEY resolves here; sealed orders can be opened."
           fi
 
+      # Exit 3 means the script refused to clear a round because it could not
+      # open the sealed orders in it. That is a real failure and the job must
+      # end red - but not here, because resolving questions and republishing the
+      # site need no key and should still happen. So the refusal is remembered
+      # and the job fails on it at the very end.
       - name: Clear rounds whose windows have closed
+        id: clear
         env:
           MARKET_SEAL_PRIVATE_KEY: ${{ secrets.MARKET_SEAL_PRIVATE_KEY }}
-        run: node scripts/clear-round.js
+        run: |
+          set +e
+          node scripts/clear-round.js
+          code=$?
+          set -e
+          if [ "$code" -eq 3 ]; then
+            echo "blocked=1" >> "$GITHUB_OUTPUT"
+          elif [ "$code" -ne 0 ]; then
+            exit "$code"
+          fi
 
       - name: Resolve everything due
         env:
@@ -144,6 +159,17 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh workflow run seats.yml --ref main || true
+
+      # Last, so that everything which could be done has been done first. A
+      # round that closed with orders in it and did not clear is the market
+      # failing at the only thing it exists for, and it must not be reported as
+      # a healthy run - that is how the first cleared round in this market's
+      # history was missed on the day it should have happened.
+      - name: Fail if a round could not be cleared
+        if: steps.clear.outputs.blocked == '1'
+        run: |
+          echo "::error title=A closed round could not be cleared::Its orders are sealed and MARKET_SEAL_PRIVATE_KEY is not set on this runner, so they cannot be opened. The round stays queued and will clear correctly once the secret is added as a GitHub Actions repository secret on elpabl0/Claude-wrong. Resolution and publishing in this run were unaffected."
+          exit 1
 
 # The site is served by Railway, which redeploys from main on its own. GitHub
 # Pages was an alternative publishing path that was never enabled on this

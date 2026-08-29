@@ -43,6 +43,11 @@ if (!due.length) {
 }
 
 let wrote = 0;
+// Rounds this runner refused to clear because it could not open their orders.
+// Tracked separately from `wrote` because the two need opposite exit codes: a
+// round with nothing in it is a quiet day, a round whose orders exist and
+// cannot be read is a broken market that will stay broken until someone acts.
+const blocked = [];
 for (const { question, round } of due) {
   const commitments = readJsonl(commitmentsFile(question.id, round.id));
   const revealLines = readJsonl(revealsFile(question.id, round.id));
@@ -79,6 +84,7 @@ for (const { question, round } of due) {
         '    Refusing to clear - clearing without them would publish a price that never existed.\n' +
         '    Set the secret and re-run; the round is still queued.',
     );
+    blocked.push(`${question.id}/${round.id}`);
     continue;
   }
 
@@ -141,3 +147,24 @@ for (const { question, round } of due) {
 }
 
 console.log(`\n${DRY ? 'Would clear' : 'Cleared'} ${DRY ? due.length : wrote} round(s).`);
+
+// Exit 3, not 0 and not 1.
+//
+// Refusing to clear is the right call - publishing a price computed from only
+// the orders you happen to be able to read is worse than publishing none. But
+// this script exited 0 while refusing, so the workflow went green, the watchdog
+// saw a healthy run, and the first round this market ever had orders in sat
+// unclear with nothing anywhere saying so. A correct refusal that reports
+// success is indistinguishable from a quiet day, and a quiet day is exactly
+// what this market has had for six weeks.
+//
+// A distinct code rather than 1 so the caller can tell "this runner is missing
+// a secret" from "this script crashed", and can still run the resolution and
+// publishing steps - which need no key - before failing the job at the end.
+if (blocked.length && !DRY) {
+  console.error(
+    `\n${blocked.length} round(s) could not be cleared for want of MARKET_SEAL_PRIVATE_KEY: ${blocked.join(', ')}.\n` +
+      'They stay queued and will clear correctly once the secret is set on the runner.',
+  );
+  process.exit(3);
+}
