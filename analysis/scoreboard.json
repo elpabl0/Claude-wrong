@@ -1,7 +1,7 @@
 {
-  "generated_utc": "2026-08-28T22:22:50.975Z",
+  "generated_utc": "2026-08-29T07:06:49.215Z",
   "liveness": {
-    "checked_utc": "2026-08-28T22:22:50.975Z",
+    "checked_utc": "2026-08-29T07:06:49.216Z",
     "ok": false,
     "state": "stalled",
     "checks": [
@@ -9,7 +9,7 @@
         "id": "authoring",
         "label": "Questions written",
         "ok": false,
-        "detail": "Last batch was 10 days ago; questions are written weekly, so the authoring run has stopped.",
+        "detail": "Last batch was 11 days ago; questions are written weekly, so the authoring run has stopped.",
         "severity": "stalled"
       },
       {
@@ -30,7 +30,7 @@
         "id": "canary",
         "label": "Daily canary",
         "ok": true,
-        "detail": "Last canary resolved 1 day(s) ago; the full path works end to end.",
+        "detail": "Last canary resolved 0 day(s) ago; the full path works end to end.",
         "severity": "ok"
       },
       {
@@ -53,7 +53,7 @@
         "id": "authoring",
         "label": "Questions written",
         "ok": false,
-        "detail": "Last batch was 10 days ago; questions are written weekly, so the authoring run has stopped.",
+        "detail": "Last batch was 11 days ago; questions are written weekly, so the authoring run has stopped.",
         "severity": "stalled"
       },
       {
@@ -71,12 +71,13 @@
   "horizon_note": "The pooled leaderboard is confounded by horizon: a two-day question is easier to be right about than a ninety-day one, so a seat that traded only short questions scores better per contract without forecasting better. leaderboard_by_horizon is the comparison that means something. Questions in an unscored lane (currently: canary) appear in no score at all.",
   "counts": {
     "questions": 18,
-    "open": 10,
-    "resolved": 8,
+    "open": 9,
+    "resolved": 9,
     "void": 0,
     "seats": 6
   },
   "settled_question_ids": [
+    "2026-08-28-canary-berlin-max-temp",
     "2026-08-26-canary-helsinki-max-temp",
     "2026-08-25-canary-dublin-max-temp",
     "2026-08-24-canary-rome-max-temp",
