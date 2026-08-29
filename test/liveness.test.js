@@ -198,3 +198,43 @@ test('no closed canary round yet means the check stays silent rather than failin
   const r = liveness(healthy(), { now: NOW });
   assert.equal(check(r, 'canary_clears'), undefined, 'nothing to say before the first round closes');
 });
+
+test('a canary round that closed with orders in it says so, instead of quoting older rounds', () => {
+  // The failure this exists for: on the first day this market ever had orders,
+  // canary_clears went on reporting "0 distinct seat(s) submitted" from the
+  // previous three canaries, while the true state was two seats submitted and a
+  // runner that could not open them. Opposite problems, opposite fixes.
+  const market = healthy({
+    questions: [authored('2026-08-30T00:00:00.000Z'), clearedCanary('19', false, '0 distinct seat(s) submitted; 2 required to clear')],
+    roundsAwaitingClear: [
+      { question: { id: 'canary-today', lane: 'canary' }, round: { id: 'r1', closes_utc: '2026-09-01T11:00:00.000Z', commitment_count: 2 } },
+    ],
+  });
+  const c = check(liveness(market, { now: NOW }), 'canary_clears');
+  assert.equal(c.ok, false);
+  assert.match(c.detail, /closed with orders in them/);
+  assert.match(c.detail, /canary-today\/r1: 2 order\(s\)/, 'names the round so it can be chased');
+  assert.doesNotMatch(c.detail, /0 distinct seat/, 'must not report the opposite problem');
+});
+
+test('with no orders anywhere, the older reason is still what gets reported', () => {
+  const market = healthy({
+    questions: [authored('2026-08-30T00:00:00.000Z'), clearedCanary('19', false, '0 distinct seat(s) submitted; 2 required to clear')],
+    roundsAwaitingClear: [],
+  });
+  const c = check(liveness(market, { now: NOW }), 'canary_clears');
+  assert.equal(c.ok, false);
+  assert.match(c.detail, /0 distinct seat/);
+});
+
+test('a round that closed minutes ago with orders is not itself a failure', () => {
+  // Only the wording changes. A canary that has cleared recently stays green
+  // even while today's round sits waiting for the clearing job to come round.
+  const market = healthy({
+    questions: [authored('2026-08-30T00:00:00.000Z'), clearedCanary('20', true)],
+    roundsAwaitingClear: [
+      { question: { id: 'canary-today', lane: 'canary' }, round: { id: 'r1', closes_utc: '2026-09-01T11:00:00.000Z', commitment_count: 2 } },
+    ],
+  });
+  assert.equal(check(liveness(market, { now: NOW }), 'canary_clears').ok, true);
+});
