@@ -8,7 +8,7 @@
  * MCP are the same ones on the site, computed by the same code, from the same
  * commit.
  */
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { paths, loadConfig, todayUTC } from '../lib/config.js';
 import { loadMarket } from '../lib/market.js';
@@ -46,5 +46,47 @@ const scoreboard = {
 };
 
 mkdirSync(paths.analysis, { recursive: true });
-writeFileSync(join(paths.analysis, 'scoreboard.json'), JSON.stringify(scoreboard, null, 2) + '\n');
-console.log(`Wrote analysis/scoreboard.json: ${scoreboard.leaderboard.length} seat(s), ${scoreboard.counts.resolved} resolved.`);
+
+// Only rewrite the file if something other than the clock has moved.
+//
+// This is recomputed on every clearing run, and two of its fields are
+// timestamps, so it changed on every run whether or not anything happened. The
+// job commits whatever changed, so the ledger filled with "market: clear and
+// resolve" commits whose entire content was generated_utc ticking forward - on
+// 29 August there were three in ninety minutes, none of which recorded an
+// event. A history you cannot read as a list of things that happened is not
+// much of a record, and this repository is almost entirely a record.
+//
+// It also made the schedule expensive to fix. The clearing job needs to run
+// more often than four times a day, because GitHub fires perhaps half of its
+// scheduled runs and a round that closed at 15:00 sat unclear until past 20:00
+// tonight for exactly that reason. Doubling the slots was doubling the noise.
+// With this, an idle run writes nothing, commits nothing, and costs nothing.
+//
+// The comparison ignores only the two clock fields. Anything real - a clearing,
+// a resolution, a liveness check changing state - differs elsewhere and is
+// written and published immediately. A stale timestamp on an unchanged file is
+// not a loss: liveness here is computed from the committed record rather than
+// from a heartbeat, precisely so that freshness is never mistaken for health.
+const CLOCK_FIELDS = new Set(['generated_utc', 'checked_utc']);
+const withoutClocks = (v) =>
+  JSON.stringify(v, (k, val) => (CLOCK_FIELDS.has(k) ? null : val));
+
+const target = join(paths.analysis, 'scoreboard.json');
+const previous = existsSync(target) ? readFileSync(target, 'utf8') : null;
+let unchanged = false;
+if (previous) {
+  try {
+    unchanged = withoutClocks(JSON.parse(previous)) === withoutClocks(scoreboard);
+  } catch {
+    // An unreadable previous file is a reason to write, not to crash.
+    unchanged = false;
+  }
+}
+
+if (unchanged) {
+  console.log(`analysis/scoreboard.json unchanged apart from its timestamps; leaving it alone.`);
+} else {
+  writeFileSync(target, JSON.stringify(scoreboard, null, 2) + '\n');
+  console.log(`Wrote analysis/scoreboard.json: ${scoreboard.leaderboard.length} seat(s), ${scoreboard.counts.resolved} resolved.`);
+}

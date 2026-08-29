@@ -21,7 +21,20 @@ name: Clear, resolve and publish
 # against what the platform actually does.
 on:
   schedule:
-    - cron: '17 */6 * * *' # every six hours
+    # Every three hours, not every six.
+    #
+    # GitHub delivers roughly half of the scheduled runs it promises here, and
+    # the failure is not academic: the 19:17 slot did not fire on 29 August, so
+    # a round that closed at 15:00 was still unclear past 20:00 - the market
+    # failing at the one thing it exists for, for five hours, because a cron did
+    # not go off. More slots is the same remedy the canary already needed, and
+    # it works for the same reason: whichever one fires does the work.
+    #
+    # This was only affordable once scripts/scoreboard.js stopped rewriting
+    # itself on every run. Before that each pass committed a pair of moving
+    # timestamps, so doubling the slots would have doubled the noise in a ledger
+    # whose readability is most of its value. An idle run now writes nothing.
+    - cron: '17 */3 * * *'
   push:
     branches: [main]
   workflow_dispatch:
