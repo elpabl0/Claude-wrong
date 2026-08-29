@@ -1,0 +1,2 @@
+{"order_id":"2026-08-29-canary-madrid-max-temp-r1-smoke-test-01","seat":"smoke-test","commitment":"606b604db5cffd19582d7a635f51b9120f6d54117716e12110d619c41aabe913","submitted_utc":"2026-08-29T11:16:06.284Z","seal_mode":"sealed"}
+{"order_id":"2026-08-29-canary-madrid-max-temp-r1-persist-probe-01","seat":"persist-probe","commitment":"bd250cb6f211f9c1bd971ac73d9c28c02bb1dc0f6d67216f652e07875cdfb085","submitted_utc":"2026-08-29T11:17:11.482Z","seal_mode":"sealed"}

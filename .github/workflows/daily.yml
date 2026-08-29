@@ -58,6 +58,29 @@ jobs:
         with:
           node-version: '22'
 
+      # Orders in this market are sealed to a public key, and clearing them needs
+      # the private half on the runner. That step has never once executed: no
+      # round has ever contained an order, so scripts/clear-round.js has never
+      # had a body to open, so a missing key has never been able to fail.
+      #
+      # It would have failed on the first round that mattered - correctly, since
+      # clearing sealed orders you cannot read means silently dropping them, and
+      # the script refuses rather than doing that. But "correctly" is not much
+      # comfort when the cost is the market's first cleared round, and the whole
+      # reason the seat job is red is a secret that was set in the wrong place.
+      # There is no sense discovering the same thing twice.
+      #
+      # A warning, not a failure: this job also resolves questions and rebuilds
+      # the site, and neither needs the key. Turning the whole run red over a
+      # step with nothing to do would cost more than it tells anyone.
+      - name: Report whether this runner could open a sealed order
+        run: |
+          if [ -z "${{ secrets.MARKET_SEAL_PRIVATE_KEY }}" ]; then
+            echo "::warning title=MARKET_SEAL_PRIVATE_KEY is empty in this workflow::Nothing is broken yet - no round has ever held an order. But config/seal-public-key.pem exists, so every order will be sealed, and the first round with orders in it will refuse to clear on this runner. It must be a GitHub Actions repository secret on elpabl0/Claude-wrong, holding the private half of that key (PEM, or base64 of the PEM)."
+          else
+            echo "MARKET_SEAL_PRIVATE_KEY resolves here; sealed orders can be opened."
+          fi
+
       - name: Clear rounds whose windows have closed
         env:
           MARKET_SEAL_PRIVATE_KEY: ${{ secrets.MARKET_SEAL_PRIVATE_KEY }}
