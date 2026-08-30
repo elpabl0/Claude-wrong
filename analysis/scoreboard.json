@@ -1,7 +1,7 @@
 {
-  "generated_utc": "2026-08-30T05:31:21.696Z",
+  "generated_utc": "2026-08-30T12:00:13.758Z",
   "liveness": {
-    "checked_utc": "2026-08-30T05:31:21.696Z",
+    "checked_utc": "2026-08-30T12:00:13.758Z",
     "ok": false,
     "state": "stalled",
     "checks": [
@@ -43,9 +43,9 @@
       {
         "id": "participation",
         "label": "Seats trading",
-        "ok": true,
-        "detail": "Open rounds have orders, or are early in their window.",
-        "severity": "ok"
+        "ok": false,
+        "detail": "4 open round(s) are past halfway with no orders at all.",
+        "severity": "quiet"
       }
     ],
     "stalled": [
@@ -62,6 +62,13 @@
         "ok": false,
         "detail": "1 canary round(s) closed with orders in them and have not been cleared (2026-08-29-canary-madrid-max-temp/r1: 2 order(s)). Seats are turning up; the orders are not being turned into a price.",
         "severity": "stalled"
+      },
+      {
+        "id": "participation",
+        "label": "Seats trading",
+        "ok": false,
+        "detail": "4 open round(s) are past halfway with no orders at all.",
+        "severity": "quiet"
       }
     ]
   },
@@ -70,8 +77,8 @@
   "ranking_note": "Ranked on log score per contract. Total score scales with how much a seat trades, so ranking on it would let a bigger bankroll buy position; per-contract score cannot be bought that way, and the score is zero-sum, so extra seats transfer score rather than create it.",
   "horizon_note": "The pooled leaderboard is confounded by horizon: a two-day question is easier to be right about than a ninety-day one, so a seat that traded only short questions scores better per contract without forecasting better. leaderboard_by_horizon is the comparison that means something. Questions in an unscored lane (currently: canary) appear in no score at all.",
   "counts": {
-    "questions": 22,
-    "open": 12,
+    "questions": 23,
+    "open": 13,
     "resolved": 10,
     "void": 0,
     "seats": 6
