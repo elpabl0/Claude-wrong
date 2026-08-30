@@ -99,12 +99,25 @@ jobs:
   # when clearing is blocked and re-running cannot help - today's case - because
   # nothing in the cycle depends on the clearing succeeding.
   #
-  # So the rule is stated the other way round: nudge only on completions of jobs
-  # that sit at the head of a chain. The canary is written by a scheduled job
-  # nothing dispatches. CI and the credential check run on pushes by a person or
-  # a PAT, which is the only kind of push GitHub raises events for at all. None
-  # of the three can be reached from this dispatch, so the graph has no cycle in
-  # it by construction and not by a condition that has to keep being true.
+  # So the rule is stated the other way round: nudge only on the completion of a
+  # job that sits at the head of a chain and that nothing else dispatches. The
+  # canary qualifies - it is written by a scheduled job, nothing dispatches it,
+  # and it cannot be reached from here, so the graph has no cycle in it by
+  # construction and not by a condition that has to keep being true.
+  #
+  # It is one workflow rather than three because the first version was measured.
+  # CI and the credential check were in this list too, and a single push produced
+  # five dispatches of the clearing job in nine seconds: that push runs CI, the
+  # credential check and the canary, and each completion nudged. Three were
+  # cancelled by the concurrency group so nothing was harmed - but it is waste,
+  # and a run history full of cancelled jobs reads like something is wrong, which
+  # is its own cost.
+  #
+  # They were never needed either. A push by a person or a PAT already triggers
+  # daily.yml through its own push trigger, so nudging on CI was a second route
+  # to a job that was already running. The canary is the case that trigger cannot
+  # cover, because the canary commit is made with GITHUB_TOKEN and GitHub raises
+  # no push event for it. Covering exactly the uncovered case is the whole job.
   #
   # Cheap enough to do unconditionally: since scoreboard.js stopped rewriting
   # itself on every run, a clearing pass with nothing to do writes nothing and
@@ -112,8 +125,7 @@ jobs:
   nudge-clearing:
     if: >-
       github.event_name == 'workflow_run' &&
-      contains(fromJSON('["Write the daily canary", "CI", "Police the market credential"]'),
-               github.event.workflow_run.name)
+      github.event.workflow_run.name == 'Write the daily canary'
     runs-on: ubuntu-latest
     permissions:
       actions: write
