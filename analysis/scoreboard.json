@@ -1,7 +1,7 @@
 {
-  "generated_utc": "2026-08-29T16:44:42.363Z",
+  "generated_utc": "2026-08-30T05:31:21.696Z",
   "liveness": {
-    "checked_utc": "2026-08-29T16:44:42.364Z",
+    "checked_utc": "2026-08-30T05:31:21.696Z",
     "ok": false,
     "state": "stalled",
     "checks": [
@@ -9,15 +9,15 @@
         "id": "authoring",
         "label": "Questions written",
         "ok": true,
-        "detail": "Last batch 0 day(s) ago.",
+        "detail": "Last batch 1 day(s) ago.",
         "severity": "ok"
       },
       {
         "id": "clearing",
         "label": "Rounds cleared",
-        "ok": true,
-        "detail": "1 round(s) waiting, all within the six-hour cycle.",
-        "severity": "ok"
+        "ok": false,
+        "detail": "1 round(s) closed more than twelve hours ago and still not cleared: 2026-08-29-canary-madrid-max-temp/r1.",
+        "severity": "stalled"
       },
       {
         "id": "resolution",
@@ -50,6 +50,13 @@
     ],
     "stalled": [
       {
+        "id": "clearing",
+        "label": "Rounds cleared",
+        "ok": false,
+        "detail": "1 round(s) closed more than twelve hours ago and still not cleared: 2026-08-29-canary-madrid-max-temp/r1.",
+        "severity": "stalled"
+      },
+      {
         "id": "canary_clears",
         "label": "Canary rounds clear",
         "ok": false,
@@ -64,12 +71,13 @@
   "horizon_note": "The pooled leaderboard is confounded by horizon: a two-day question is easier to be right about than a ninety-day one, so a seat that traded only short questions scores better per contract without forecasting better. leaderboard_by_horizon is the comparison that means something. Questions in an unscored lane (currently: canary) appear in no score at all.",
   "counts": {
     "questions": 22,
-    "open": 13,
-    "resolved": 9,
+    "open": 12,
+    "resolved": 10,
     "void": 0,
     "seats": 6
   },
   "settled_question_ids": [
+    "2026-08-29-canary-madrid-max-temp",
     "2026-08-28-canary-berlin-max-temp",
     "2026-08-26-canary-helsinki-max-temp",
     "2026-08-25-canary-dublin-max-temp",
@@ -107,51 +115,51 @@
   "bankrolls": [
     {
       "seat": "haiku-bare",
-      "granted": 1100,
-      "top_ups": 1,
+      "granted": 1200,
+      "top_ups": 2,
       "realised_pnl": 0,
       "at_risk": 0,
-      "available": 1100
+      "available": 1200
     },
     {
       "seat": "house",
-      "granted": 1100,
-      "top_ups": 1,
+      "granted": 1200,
+      "top_ups": 2,
       "realised_pnl": 0,
       "at_risk": 0,
-      "available": 1100
+      "available": 1200
     },
     {
       "seat": "opus-bare",
-      "granted": 1100,
-      "top_ups": 1,
+      "granted": 1200,
+      "top_ups": 2,
       "realised_pnl": 0,
       "at_risk": 0,
-      "available": 1100
+      "available": 1200
     },
     {
       "seat": "persist-probe",
-      "granted": 1100,
-      "top_ups": 1,
+      "granted": 1200,
+      "top_ups": 2,
       "realised_pnl": 0,
       "at_risk": 0,
-      "available": 1100
+      "available": 1200
     },
     {
       "seat": "smoke-test",
-      "granted": 1100,
-      "top_ups": 1,
+      "granted": 1200,
+      "top_ups": 2,
       "realised_pnl": 0,
       "at_risk": 0,
-      "available": 1100
+      "available": 1200
     },
     {
       "seat": "sonnet-open",
-      "granted": 1100,
-      "top_ups": 1,
+      "granted": 1200,
+      "top_ups": 2,
       "realised_pnl": 0,
       "at_risk": 0,
-      "available": 1100
+      "available": 1200
     }
   ],
   "cross_model_error_correlation": {

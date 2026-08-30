@@ -1,0 +1,16 @@
+{
+  "question_id": "2026-08-29-canary-madrid-max-temp",
+  "resolved_utc": "2026-08-30T05:31:20.564Z",
+  "status": "yes",
+  "observed": 29.8,
+  "detail": "https://api.open-meteo.com/v1/forecast?latitude=40.42&longitude=-3.7&daily=temperature_2m_max&start_date=2026-08-29&end_date=2026-08-29&timezone=UTC → /daily/temperature_2m_max/0 = 29.8; criterion was > 29.5 → YES",
+  "resolver_type": "json",
+  "protocol_version": 2,
+  "attempts": [
+    {
+      "utc": "2026-08-30T05:31:20.564Z",
+      "outcome": "yes",
+      "detail": "https://api.open-meteo.com/v1/forecast?latitude=40.42&longitude=-3.7&daily=temperature_2m_max&start_date=2026-08-29&end_date=2026-08-29&timezone=UTC → /daily/temperature_2m_max/0 = 29.8; criterion was > 29.5 → YES"
+    }
+  ]
+}
