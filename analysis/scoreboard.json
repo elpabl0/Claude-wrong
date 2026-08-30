@@ -1,7 +1,7 @@
 {
-  "generated_utc": "2026-08-30T12:00:13.758Z",
+  "generated_utc": "2026-08-30T16:10:41.175Z",
   "liveness": {
-    "checked_utc": "2026-08-30T12:00:13.758Z",
+    "checked_utc": "2026-08-30T16:10:41.175Z",
     "ok": false,
     "state": "stalled",
     "checks": [
@@ -43,9 +43,9 @@
       {
         "id": "participation",
         "label": "Seats trading",
-        "ok": false,
-        "detail": "4 open round(s) are past halfway with no orders at all.",
-        "severity": "quiet"
+        "ok": true,
+        "detail": "Open rounds have orders, or are early in their window.",
+        "severity": "ok"
       }
     ],
     "stalled": [
@@ -62,13 +62,6 @@
         "ok": false,
         "detail": "1 canary round(s) closed with orders in them and have not been cleared (2026-08-29-canary-madrid-max-temp/r1: 2 order(s)). Seats are turning up; the orders are not being turned into a price.",
         "severity": "stalled"
-      },
-      {
-        "id": "participation",
-        "label": "Seats trading",
-        "ok": false,
-        "detail": "4 open round(s) are past halfway with no orders at all.",
-        "severity": "quiet"
       }
     ]
   },
