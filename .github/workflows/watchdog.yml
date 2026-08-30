@@ -75,6 +75,55 @@ jobs:
               body: `Failed again: ${run.html_url} (${run.head_sha.slice(0, 7)}, ${run.updated_at}).`,
             });
 
+  # Give the clearing job a trigger that actually fires.
+  #
+  # daily.yml has only GitHub's scheduler, and GitHub delivers roughly half of
+  # what it promises here. On 29 August the 19:17 slot did not fire and a round
+  # that closed at 15:00 was still unclear past 20:00; moving to every three
+  # hours helped but did not fix it - the 15:17 slot on the 30th did not fire
+  # either. More slots cannot help when the problem is that slots do not run.
+  #
+  # This workflow, by contrast, is triggered by other workflows COMPLETING, and
+  # workflow_run events are delivered reliably regardless of what credential made
+  # the commit - which is exactly the property the push trigger turned out to
+  # lack. So the watchdog, which already exists to notice that things are stuck,
+  # can do something about the one thing it is able to fix.
+  #
+  # The guard is an allowlist of workflows that nothing else dispatches, which is
+  # what makes this acyclic rather than merely unlikely to loop.
+  #
+  # Excluding daily.yml alone is not enough, and the near-miss is worth writing
+  # down. daily.yml dispatches seats.yml; seats.yml completing triggers this
+  # workflow; so nudging on seats would give daily -> seats -> watchdog -> daily,
+  # a loop with three hops instead of one. It would also have run hottest exactly
+  # when clearing is blocked and re-running cannot help - today's case - because
+  # nothing in the cycle depends on the clearing succeeding.
+  #
+  # So the rule is stated the other way round: nudge only on completions of jobs
+  # that sit at the head of a chain. The canary is written by a scheduled job
+  # nothing dispatches. CI and the credential check run on pushes by a person or
+  # a PAT, which is the only kind of push GitHub raises events for at all. None
+  # of the three can be reached from this dispatch, so the graph has no cycle in
+  # it by construction and not by a condition that has to keep being true.
+  #
+  # Cheap enough to do unconditionally: since scoreboard.js stopped rewriting
+  # itself on every run, a clearing pass with nothing to do writes nothing and
+  # commits nothing.
+  nudge-clearing:
+    if: >-
+      github.event_name == 'workflow_run' &&
+      contains(fromJSON('["Write the daily canary", "CI", "Police the market credential"]'),
+               github.event.workflow_run.name)
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Ask for a clearing pass
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: gh workflow run daily.yml --repo "$REPO" --ref main || true
+
   stalled-market:
     if: github.event_name != 'workflow_run'
     runs-on: ubuntu-latest
