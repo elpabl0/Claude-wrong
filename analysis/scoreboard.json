@@ -1,7 +1,7 @@
 {
-  "generated_utc": "2026-08-30T16:10:41.175Z",
+  "generated_utc": "2026-08-31T05:45:01.600Z",
   "liveness": {
-    "checked_utc": "2026-08-30T16:10:41.175Z",
+    "checked_utc": "2026-08-31T05:45:01.600Z",
     "ok": false,
     "state": "stalled",
     "checks": [
@@ -9,7 +9,7 @@
         "id": "authoring",
         "label": "Questions written",
         "ok": true,
-        "detail": "Last batch 1 day(s) ago.",
+        "detail": "Last batch 2 day(s) ago.",
         "severity": "ok"
       },
       {
@@ -71,12 +71,13 @@
   "horizon_note": "The pooled leaderboard is confounded by horizon: a two-day question is easier to be right about than a ninety-day one, so a seat that traded only short questions scores better per contract without forecasting better. leaderboard_by_horizon is the comparison that means something. Questions in an unscored lane (currently: canary) appear in no score at all.",
   "counts": {
     "questions": 23,
-    "open": 13,
-    "resolved": 10,
+    "open": 9,
+    "resolved": 11,
     "void": 0,
     "seats": 6
   },
   "settled_question_ids": [
+    "2026-08-30-canary-warsaw-max-temp",
     "2026-08-29-canary-madrid-max-temp",
     "2026-08-28-canary-berlin-max-temp",
     "2026-08-26-canary-helsinki-max-temp",

@@ -1,15 +1,8 @@
 {
-  "checked_utc": "2026-08-30T23:35:11.558Z",
-  "checked": 13,
+  "checked_utc": "2026-08-31T05:45:01.543Z",
+  "checked": 9,
   "failing": 0,
   "results": [
-    {
-      "question_id": "2026-08-30-canary-warsaw-max-temp",
-      "type": "json",
-      "resolution_date": "2026-08-31",
-      "ok": true,
-      "detail": "https://api.open-meteo.com/v1/forecast?latitude=52.23&longitude=21.01&daily=temperature_2m_max&start_date=2026-08-30&end_date=2026-08-30&timezone=UTC reachable and /daily/temperature_2m_max/0 present"
-    },
     {
       "question_id": "2026-08-29-chicago-max-temp-sep-8",
       "type": "json",
@@ -53,20 +46,6 @@
       "detail": "Manifold market I6gU82zcus readable"
     },
     {
-      "question_id": "2026-08-18-openai-releases-gpt-6-by-august-31",
-      "type": "manifold",
-      "resolution_date": "2026-08-31",
-      "ok": true,
-      "detail": "Manifold market LhR5uSAEls readable"
-    },
-    {
-      "question_id": "2026-08-18-metr-time-horizon-exceeds-ten-hours",
-      "type": "manifold",
-      "resolution_date": "2026-08-31",
-      "ok": true,
-      "detail": "Manifold market dCP8cP0CLL readable"
-    },
-    {
       "question_id": "2026-08-18-california-billionaire-wealth-tax",
       "type": "manifold",
       "resolution_date": "2026-12-31",
@@ -79,13 +58,6 @@
       "resolution_date": "2026-10-05",
       "ok": true,
       "detail": "arXiv query endpoint reachable"
-    },
-    {
-      "question_id": "2026-08-18-anthropic-patches-opus-5-base-model-behaviour",
-      "type": "manifold",
-      "resolution_date": "2026-08-31",
-      "ok": true,
-      "detail": "Manifold market RLERSpg8AA readable"
     },
     {
       "question_id": "2026-08-18-ai-created-song-billboard-top-20",
