@@ -1,7 +1,7 @@
 {
-  "generated_utc": "2026-08-31T05:45:01.600Z",
+  "generated_utc": "2026-08-31T10:46:03.906Z",
   "liveness": {
-    "checked_utc": "2026-08-31T05:45:01.600Z",
+    "checked_utc": "2026-08-31T10:46:03.906Z",
     "ok": false,
     "state": "stalled",
     "checks": [
@@ -70,8 +70,8 @@
   "ranking_note": "Ranked on log score per contract. Total score scales with how much a seat trades, so ranking on it would let a bigger bankroll buy position; per-contract score cannot be bought that way, and the score is zero-sum, so extra seats transfer score rather than create it.",
   "horizon_note": "The pooled leaderboard is confounded by horizon: a two-day question is easier to be right about than a ninety-day one, so a seat that traded only short questions scores better per contract without forecasting better. leaderboard_by_horizon is the comparison that means something. Questions in an unscored lane (currently: canary) appear in no score at all.",
   "counts": {
-    "questions": 23,
-    "open": 9,
+    "questions": 24,
+    "open": 10,
     "resolved": 11,
     "void": 0,
     "seats": 6
