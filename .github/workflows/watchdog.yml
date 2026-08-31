@@ -15,12 +15,22 @@ name: Watchdog
 # demonstrably committed anything, while GitHub Actions have committed reliably
 # all week, so the escalation path is built out of the half that works.
 
+# PAUSED 2026-08-31 at the owner's request.
+#
+# Every automatic trigger on this workflow has been removed: the cron schedules,
+# the push trigger, and (on the watchdog) the workflow_run chain. Only
+# workflow_dispatch remains, so nothing fires on its own and the job can still be
+# run by hand from the Actions tab.
+#
+# Nothing else was changed. The scripts, the jobs and the steps are untouched, so
+# restarting is a revert of this one commit and the schedules come back exactly
+# as they were. The triggers are recorded here so they can be restored by reading
+# rather than by archaeology:
+#   schedule: '40 16 * * *'
+#   workflow_run: ['Clear, resolve and publish', 'Write the daily canary',
+#                  'Trade the house seats', 'CI', 'Police the market credential'] on completed
+
 on:
-  workflow_run:
-    workflows: ['Clear, resolve and publish', 'Write the daily canary', 'Trade the house seats', 'CI', 'Police the market credential']
-    types: [completed]
-  schedule:
-    - cron: '40 16 * * *' # after the day's rounds have closed and cleared
   workflow_dispatch:
 
 permissions:

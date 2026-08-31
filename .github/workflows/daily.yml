@@ -19,24 +19,21 @@ name: Clear, resolve and publish
 # added for - a more dependable clock than GitHub's scheduler - was mostly
 # imaginary too. Both were reasoned about carefully and neither was checked
 # against what the platform actually does.
+# PAUSED 2026-08-31 at the owner's request.
+#
+# Every automatic trigger on this workflow has been removed: the cron schedules,
+# the push trigger, and (on the watchdog) the workflow_run chain. Only
+# workflow_dispatch remains, so nothing fires on its own and the job can still be
+# run by hand from the Actions tab.
+#
+# Nothing else was changed. The scripts, the jobs and the steps are untouched, so
+# restarting is a revert of this one commit and the schedules come back exactly
+# as they were. The triggers are recorded here so they can be restored by reading
+# rather than by archaeology:
+#   schedule: '17 */3 * * *'
+#   push: branches [main]
+
 on:
-  schedule:
-    # Every three hours, not every six.
-    #
-    # GitHub delivers roughly half of the scheduled runs it promises here, and
-    # the failure is not academic: the 19:17 slot did not fire on 29 August, so
-    # a round that closed at 15:00 was still unclear past 20:00 - the market
-    # failing at the one thing it exists for, for five hours, because a cron did
-    # not go off. More slots is the same remedy the canary already needed, and
-    # it works for the same reason: whichever one fires does the work.
-    #
-    # This was only affordable once scripts/scoreboard.js stopped rewriting
-    # itself on every run. Before that each pass committed a pair of moving
-    # timestamps, so doubling the slots would have doubled the noise in a ledger
-    # whose readability is most of its value. An idle run now writes nothing.
-    - cron: '17 */3 * * *'
-  push:
-    branches: [main]
   workflow_dispatch:
     inputs:
       probe:
